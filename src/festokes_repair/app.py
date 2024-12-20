@@ -14,49 +14,49 @@ def image(filename):
 
 
 mesh_cards = {
-    "Unstructured Mesh": {"image": "mesh/stdmesh.png"},
-    "Curved Mesh": {"image": "mesh/curvedmesh.png"},
-    "Type One Mesh": {"image": "mesh/typeonemesh.png"},
-    "Singular Vertex Mesh": {"image": "mesh/crisscross.png"},
-    "None": {"image": "mesh/emptymesh.png"},
+    "Unstructured Mesh": {"image": "mesh/stdmesh.webp"},
+    "Curved Mesh": {"image": "mesh/curvedmesh.webp"},
+    "Type One Mesh": {"image": "mesh/typeonemesh.webp"},
+    "Singular Vertex Mesh": {"image": "mesh/crisscross.webp"},
+    "None": {"image": "mesh/emptymesh.webp"},
 }
 
 pressure_cards = {
-    "P0": {"image": "pressure/Pzeropressure.png"},
-    "P1": {"image": "pressure/Ponepressure.png"},
-    "P1*": {"image": "pressure/Ponedpressure.png"},
-    "P2": {"image": "pressure/Ptwopressure.png"},
-    "P2*": {"image": "pressure/Ptwodpressure.png"},
-    "P3": {"image": "pressure/Pthreepressure.png"},
-    "P3*": {"image": "pressure/Pthreedpressure.png"},
-    "None": {"image": "pressure/emptypressure.png"},
+    "P0": {"image": "pressure/Pzeropressure.webp"},
+    "P1": {"image": "pressure/Ponepressure.webp"},
+    "P1*": {"image": "pressure/Ponedpressure.webp"},
+    "P2": {"image": "pressure/Ptwopressure.webp"},
+    "P2*": {"image": "pressure/Ptwodpressure.webp"},
+    "P3": {"image": "pressure/Pthreepressure.webp"},
+    "P3*": {"image": "pressure/Pthreedpressure.webp"},
+    "None": {"image": "pressure/emptypressure.webp"},
 }
 
 velocity_cards = {
-    "P1": {"image": "velocity/Ponevel.png"},
-    "P1*": {"image": "velocity/Ponedvel.png"},
-    "BDM1": {"image": "velocity/BDMonevel.png"},
-    "Crouzeix-Raviart": {"image": "velocity/CRvel.png"},
-    "P2": {"image": "velocity/Ptwovel.png"},
-    "P2*": {"image": "velocity/Ptwodvel.png"},
-    "BDM2": {"image": "velocity/BDMtwovel.png"},
-    "P3": {"image": "velocity/Pthreevel.png"},
-    "P3*": {"image": "velocity/Pthreedvel.png"},
-    "BDM3": {"image": "velocity/BDMthreevel.png"},
-    "BDM4": {"image": "velocity/BDMfourvel.png"},
-    "P4": {"image": "velocity/Pfourvel.png"},
-    "P4*": {"image": "velocity/Pfourdvel.png"},
-    "None": {"image": "velocity/emptyvel.png"},
+    "P1": {"image": "velocity/Ponevel.webp"},
+    "P1*": {"image": "velocity/Ponedvel.webp"},
+    "BDM1": {"image": "velocity/BDMonevel.webp"},
+    "Crouzeix-Raviart": {"image": "velocity/CRvel.webp"},
+    "P2": {"image": "velocity/Ptwovel.webp"},
+    "P2*": {"image": "velocity/Ptwodvel.webp"},
+    "BDM2": {"image": "velocity/BDMtwovel.webp"},
+    "P3": {"image": "velocity/Pthreevel.webp"},
+    "P3*": {"image": "velocity/Pthreedvel.webp"},
+    "BDM3": {"image": "velocity/BDMthreevel.webp"},
+    "BDM4": {"image": "velocity/BDMfourvel.webp"},
+    "P4": {"image": "velocity/Pfourvel.webp"},
+    "P4*": {"image": "velocity/Pfourdvel.webp"},
+    "None": {"image": "velocity/emptyvel.webp"},
 }
 
 extra_cards = {
-    "Interior Penalty": {"image": "extra/ipdg.png"},
-    "Pressure-Jump": {"image": "extra/pj.png"},
-    "Powell-Sabin Split": {"image": "extra/psmesh.png"},
-    "Alfeld Split": {"image": "extra/alfeldsplit.png"},
-    "Brezzi-Pitkäranta": {"image": "extra/bp.png"},
-    "P3 Bubble": {"image": "extra/Pthreebubble.png"},
-    "None": {"image": "extra/emptyextra.png"},
+    "Interior Penalty": {"image": "extra/ipdg.webp"},
+    "Pressure-Jump": {"image": "extra/pj.webp"},
+    "Powell-Sabin Split": {"image": "extra/psmesh.webp"},
+    "Alfeld Split": {"image": "extra/alfeldsplit.webp"},
+    "Brezzi-Pitkäranta": {"image": "extra/bp.webp"},
+    "P3 Bubble": {"image": "extra/Pthreebubble.webp"},
+    "None": {"image": "extra/emptyextra.webp"},
 }
 
 
