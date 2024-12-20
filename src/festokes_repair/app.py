@@ -7,58 +7,72 @@ import netgen.occ as ngocc
 import ngsolve as ngs
 import os
 
+
 def image(filename):
     picture = os.path.join(os.path.dirname(__file__), "assets", filename)
     return load_image(picture)
 
-mesh_cards = { "Unstructured Mesh": { "image" : "mesh/stdmesh.png" },
-               "Curved Mesh": { "image" : "mesh/curvedmesh.png" },
-               "Type One Mesh": { "image" : "mesh/typeonemesh.png" },
-               "Singular Vertex Mesh": { "image" : "mesh/crisscross.png" },
-               "None" : { "image" : "mesh/emptymesh.png" } }
 
-pressure_cards = { "P0": { "image" : "pressure/Pzeropressure.png" },
-                   "P1": { "image" : "pressure/Ponepressure.png" },
-                   "P1*": { "image" : "pressure/Ponedpressure.png" },
-                   "P2": { "image" : "pressure/Ptwopressure.png" },
-                   "P2*": { "image" : "pressure/Ptwodpressure.png" },
-                   "P3": { "image" : "pressure/Pthreepressure.png" },
-                   "P3*": { "image" : "pressure/Pthreedpressure.png" },
-                   "None" : { "image" : "pressure/emptypressure.png" } }
+mesh_cards = {
+    "Unstructured Mesh": {"image": "mesh/stdmesh.png"},
+    "Curved Mesh": {"image": "mesh/curvedmesh.png"},
+    "Type One Mesh": {"image": "mesh/typeonemesh.png"},
+    "Singular Vertex Mesh": {"image": "mesh/crisscross.png"},
+    "None": {"image": "mesh/emptymesh.png"},
+}
 
-velocity_cards = { "P1" : { "image" : "velocity/Ponevel.png" },
-                   "P1*" : { "image" : "velocity/Ponedvel.png" },
-                   "BDM1" : { "image" : "velocity/BDMonevel.png" },
-                   "Crouzeix-Raviart" : { "image" : "velocity/CRvel.png" },
-                   "P2" : { "image" : "velocity/Ptwovel.png" },
-                   "P2*" : { "image" : "velocity/Ptwodvel.png" },
-                   "BDM2" : { "image" : "velocity/BDMtwovel.png" },
-                   "P3" : { "image" : "velocity/Pthreevel.png" },
-                   "P3*" : { "image" : "velocity/Pthreedvel.png" },
-                   "BDM3" : { "image" : "velocity/BDMthreevel.png" },
-                   "BDM4" : { "image" : "velocity/BDMfourvel.png" },
-                   "P4" : { "image" : "velocity/Pfourvel.png" },
-                   "P4*" : { "image" : "velocity/Pfourdvel.png" },
-                   "None" : { "image" : "velocity/emptyvel.png" } }
+pressure_cards = {
+    "P0": {"image": "pressure/Pzeropressure.png"},
+    "P1": {"image": "pressure/Ponepressure.png"},
+    "P1*": {"image": "pressure/Ponedpressure.png"},
+    "P2": {"image": "pressure/Ptwopressure.png"},
+    "P2*": {"image": "pressure/Ptwodpressure.png"},
+    "P3": {"image": "pressure/Pthreepressure.png"},
+    "P3*": {"image": "pressure/Pthreedpressure.png"},
+    "None": {"image": "pressure/emptypressure.png"},
+}
 
-extra_cards = { "Interior Penalty" : { "image" : "extra/ipdg.png" },
-                "Pressure-Jump" : { "image" : "extra/pj.png" },
-                "Powell-Sabin Split" : { "image" : "extra/psmesh.png" },
-                "Alfeld Split" : { "image" : "extra/alfeldsplit.png" },
-                "Brezzi-Pitkäranta" : { "image" : "extra/bp.png" },
-                "P3 Bubble" : { "image" : "extra/Pthreebubble.png" },
-                "None" : { "image" : "extra/emptyextra.png" } }
+velocity_cards = {
+    "P1": {"image": "velocity/Ponevel.png"},
+    "P1*": {"image": "velocity/Ponedvel.png"},
+    "BDM1": {"image": "velocity/BDMonevel.png"},
+    "Crouzeix-Raviart": {"image": "velocity/CRvel.png"},
+    "P2": {"image": "velocity/Ptwovel.png"},
+    "P2*": {"image": "velocity/Ptwodvel.png"},
+    "BDM2": {"image": "velocity/BDMtwovel.png"},
+    "P3": {"image": "velocity/Pthreevel.png"},
+    "P3*": {"image": "velocity/Pthreedvel.png"},
+    "BDM3": {"image": "velocity/BDMthreevel.png"},
+    "BDM4": {"image": "velocity/BDMfourvel.png"},
+    "P4": {"image": "velocity/Pfourvel.png"},
+    "P4*": {"image": "velocity/Pfourdvel.png"},
+    "None": {"image": "velocity/emptyvel.png"},
+}
+
+extra_cards = {
+    "Interior Penalty": {"image": "extra/ipdg.png"},
+    "Pressure-Jump": {"image": "extra/pj.png"},
+    "Powell-Sabin Split": {"image": "extra/psmesh.png"},
+    "Alfeld Split": {"image": "extra/alfeldsplit.png"},
+    "Brezzi-Pitkäranta": {"image": "extra/bp.png"},
+    "P3 Bubble": {"image": "extra/Pthreebubble.png"},
+    "None": {"image": "extra/emptyextra.png"},
+}
+
 
 class CardSelector(QCard):
     def __init__(self, options, label):
         self._options = options
-        self.selector = QSelect(options=list(options.keys()),
-                                model_value="None",
-                                label=label)
+        self.selector = QSelect(
+            options=list(options.keys()), model_value="None", label=label
+        )
         self.selector.on_update_model_value(self.update)
-        self.div_image = QImg(src=image(options[self.selector.model_value]["image"]),
-                                  width="200px")
-        super().__init__(self.selector, self.div_image, style="padding: 10px; margin: 10px;")
+        self.div_image = QImg(
+            src=image(options[self.selector.model_value]["image"]), width="200px"
+        )
+        super().__init__(
+            self.selector, self.div_image, style="padding: 10px; margin: 10px;"
+        )
 
     def update(self):
         print("selected item =", self.selector.model_value)
@@ -74,7 +88,7 @@ class CardSelector(QCard):
     @model_value.setter
     def model_value(self, value):
         self.selector.model_value = value
-        
+
 
 class FeStokesRePair(App):
     def __init__(self, *args, **kwargs):
@@ -83,11 +97,11 @@ class FeStokesRePair(App):
             label="Mesh",
             options=mesh_cards,
         )
-        
+
         # self.mesh.on_update_model_value(self.calculate)
         self.pressure = CardSelector(
             label="Pressure",
-            options = pressure_cards,
+            options=pressure_cards,
         )
         # self.pressure.on_update_model_value(self.calculate)
         self.velocity = CardSelector(
@@ -95,11 +109,10 @@ class FeStokesRePair(App):
             options=velocity_cards,
         )
         # self.velocity.on_update_model_value(self.calculate)
-        self.add_extra = Row(QBtn(round=True,
-                                  icon="add",
-                                  fab=True
-                                  ).on_click(self._add_extra),
-                             classes="items-center")
+        self.add_extra = Row(
+            QBtn(round=True, icon="add", fab=True).on_click(self._add_extra),
+            classes="items-center",
+        )
         self.clear_btn = QBtn(label="Clear").on_click(self.clear)
         self.calc_btn = QBtn(label="Validate").on_click(self.calculate)
         self.extras = Row()
@@ -113,13 +126,15 @@ class FeStokesRePair(App):
             title="Error in calculation!", message="Pairing does not seem to work"
         )
 
-        self.cards = Row(self.mesh, self.pressure, self.velocity, self.extras,
-                         self.add_extra)
+        self.cards = Row(
+            self.mesh, self.pressure, self.velocity, self.extras, self.add_extra
+        )
         self.computing = QInnerLoading(
             QSpinnerGears(size="100px", color="primary"),
             Centered("Calculating..."),
             showing=True,
-            style="z-index:100;")
+            style="z-index:100;",
+        )
         self.computing.hidden = True
 
         self.result_section = Row(
@@ -130,7 +145,7 @@ class FeStokesRePair(App):
         self.component = Centered(
             Col(
                 self.user_warning,
-                self.cards, 
+                self.cards,
                 Row(self.clear_btn, self.calc_btn),
                 self.result_section,
                 classes="q-gutter-lg q-ma-lg",
@@ -152,7 +167,7 @@ class FeStokesRePair(App):
         i = len(self.extras.children)
         extra = CardSelector(
             label="Extra " + str(i + 1),
-            options = extra_cards,
+            options=extra_cards,
         )
         # extra.on_update_model_value(self.calculate)
         self.extras.children = self.extras.children + [extra]
@@ -223,6 +238,20 @@ class FeStokesRePair(App):
             if self.velocity.model_value.endswith("*"):
                 print("Make discontinuous")
                 V = ngs.Discontinuous(V)
+        bubble_space = False
+        if "P3 Bubble" in [e.model_value for e in self.extras.children]:
+            bubble_space = True
+            print("Add P3 Bubble")
+            Vhs = ngs.VectorH1(mesh, order=3)
+            bubbles = ngs.BitArray(Vhs.ndof)
+            bubbles.Clear()
+            for dof in range(
+                mesh.nv + 2 * mesh.nedge, mesh.nv + 2 * mesh.nedge + mesh.ne
+            ):
+                bubbles.Set(dof)
+                bubbles.Set(Vhs.ndof // 2 + dof)
+            Vhb = ngs.Compress(Vhs, active_dofs=bubbles)
+            V *= Vhb
         print("Create Pressure space")
         if self.pressure.model_value.endswith("*"):
             print(f"Create L2({int(self.pressure.model_value[1])})")
@@ -231,19 +260,35 @@ class FeStokesRePair(App):
             print(f"Create H1({int(self.pressure.model_value[1])})")
             Q = ngs.H1(mesh, order=int(self.pressure.model_value[1]))
         fes = V * Q
-        (u, p), (v, q) = fes.TnT()
+        if bubble_space:
+            print("in bubble space")
+            (u, ub, p), (v, vb, q) = fes.TnT()
+            gradu = ngs.Grad(u) + ngs.Grad(ub)
+            gradv = ngs.Grad(v) + ngs.Grad(vb)
+            divu = ngs.div(u) + ngs.div(ub)
+            divv = ngs.div(v) + ngs.div(vb)
+        else:
+            (u, p), (v, q) = fes.TnT()
+            gradu, gradv = ngs.Grad(u), ngs.Grad(v)
+            divu, divv = ngs.div(u), ngs.div(v)
+
         stokes = (
-            ngs.InnerProduct(ngs.Grad(u), ngs.Grad(v)) * ngs.dx
-            + ngs.div(u) * q * ngs.dx
-            + ngs.div(v) * p * ngs.dx
+            ngs.InnerProduct(gradu, gradv) * ngs.dx
+            + divu * q * ngs.dx
+            + divv * p * ngs.dx
         )
         a = ngs.BilinearForm(stokes).Assemble()
         gf = ngs.GridFunction(fes)
-        gfu, gfp = gf.components
+        if bubble_space:
+            gfu, gfb, gfp = gf.components
+            vel = gfu + gfb
+        else:
+            gfu, gfp = gf.components
+            vel = gfu
         uin = ngs.CF((1.5 * 4 * ngs.y * (0.41 - ngs.y) / (0.41 * 0.41), 0))
         gfu.Set(uin, definedon=mesh.Boundaries("left"))
         res = (-a.mat * gf.vec).Evaluate()
         inv = ngs.directsolvers.SuperLU(a.mat, fes.FreeDofs())
         gf.vec.data += inv * res
-        self.velocity_sol.draw(gfu, mesh)
+        self.velocity_sol.draw(vel, mesh)
         self.pressure_sol.draw(gfp, mesh)
