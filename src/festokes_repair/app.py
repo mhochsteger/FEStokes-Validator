@@ -2,110 +2,170 @@ from webapp_client.app import App
 from webapp_client.components import *
 from webapp_client.qcomponents import *
 from webapp_client.visualization import SolutionWebgui
-from webapp_client.utils import compute_node
+from webapp_client.utils import load_image
 import netgen.occ as ngocc
 import ngsolve as ngs
+import os
 
+def image(filename):
+    picture = os.path.join(os.path.dirname(__file__), "assets", filename)
+    return load_image(picture)
+
+mesh_cards = { "Unstructured Mesh": { "image" : "mesh/stdmesh.png" },
+               "Curved Mesh": { "image" : "mesh/curvedmesh.png" },
+               "Type One Mesh": { "image" : "mesh/typeonemesh.png" },
+               "Singular Vertex Mesh": { "image" : "mesh/crisscross.png" },
+               "None" : { "image" : "mesh/emptymesh.png" } }
+
+pressure_cards = { "P0": { "image" : "pressure/Pzeropressure.png" },
+                   "P1": { "image" : "pressure/Ponepressure.png" },
+                   "P1*": { "image" : "pressure/Ponedpressure.png" },
+                   "P2": { "image" : "pressure/Ptwopressure.png" },
+                   "P2*": { "image" : "pressure/Ptwodpressure.png" },
+                   "P3": { "image" : "pressure/Pthreepressure.png" },
+                   "P3*": { "image" : "pressure/Pthreedpressure.png" },
+                   "None" : { "image" : "pressure/emptypressure.png" } }
+
+velocity_cards = { "P1" : { "image" : "velocity/Ponevel.png" },
+                   "P1*" : { "image" : "velocity/Ponedvel.png" },
+                   "BDM1" : { "image" : "velocity/BDMonevel.png" },
+                   "Crouzeix-Raviart" : { "image" : "velocity/CRvel.png" },
+                   "P2" : { "image" : "velocity/Ptwovel.png" },
+                   "P2*" : { "image" : "velocity/Ptwodvel.png" },
+                   "BDM2" : { "image" : "velocity/BDMtwovel.png" },
+                   "P3" : { "image" : "velocity/Pthreevel.png" },
+                   "P3*" : { "image" : "velocity/Pthreedvel.png" },
+                   "BDM3" : { "image" : "velocity/BDMthreevel.png" },
+                   "BDM4" : { "image" : "velocity/BDMfourvel.png" },
+                   "P4" : { "image" : "velocity/Pfourvel.png" },
+                   "P4*" : { "image" : "velocity/Pfourdvel.png" },
+                   "None" : { "image" : "velocity/emptyvel.png" } }
+
+extra_cards = { "Interior Penalty" : { "image" : "extra/ipdg.png" },
+                "Pressure-Jump" : { "image" : "extra/pj.png" },
+                "Powell-Sabin Split" : { "image" : "extra/psmesh.png" },
+                "Alfeld Split" : { "image" : "extra/alfeldsplit.png" },
+                "Brezzi-Pitkäranta" : { "image" : "extra/bp.png" },
+                "P3 Bubble" : { "image" : "extra/Pthreebubble.png" },
+                "None" : { "image" : "extra/emptyextra.png" } }
+
+class CardSelector(QCard):
+    def __init__(self, options, label):
+        self._options = options
+        self.selector = QSelect(options=list(options.keys()),
+                                model_value="None",
+                                label=label)
+        self.selector.on_update_model_value(self.update)
+        self.div_image = QImg(src=image(options[self.selector.model_value]["image"]),
+                                  width="200px")
+        super().__init__(self.selector, self.div_image, style="padding: 10px; margin: 10px;")
+
+    def update(self):
+        print("selected item =", self.selector.model_value)
+        self.div_image.src = image(self._options[self.selector.model_value]["image"])
+
+    def on_update_model_value(self, callback):
+        self.selector.on_update_model_value(callback)
+
+    @property
+    def model_value(self):
+        return self.selector.model_value
+
+    @model_value.setter
+    def model_value(self, value):
+        self.selector.model_value = value
+        
 
 class FeStokesRePair(App):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.progress = QLinearProgress(value=0.0, animation_speed=100)
-        self.mesh = QSelect(
+        self.mesh = CardSelector(
             label="Mesh",
-            id="mesh",
-            options=[
-                "Unstructured Mesh",
-                "Curved Mesh",
-                "Type One Mesh",
-                "Singular Vertex Mesh",
-            ],
+            options=mesh_cards,
         )
-        self.mesh.on_update_model_value(self.calculate)
-        self.pressure = QSelect(
+        
+        # self.mesh.on_update_model_value(self.calculate)
+        self.pressure = CardSelector(
             label="Pressure",
-            id="pressure",
-            options=["P0", "P1", "P1*", "P2", "P2*", "P3", "P3*"],
+            options = pressure_cards,
         )
-        self.pressure.on_update_model_value(self.calculate)
-        self.velocity = QSelect(
+        # self.pressure.on_update_model_value(self.calculate)
+        self.velocity = CardSelector(
             label="Velocity",
-            id="velocity",
-            options=[
-                "P0",
-                "P1",
-                "P1*",
-                "BDM1",
-                "Crouzeix-Raviart",
-                "P2",
-                "P2*",
-                "BDM2",
-                "P3",
-                "P3*",
-            ],
+            options=velocity_cards,
         )
-        self.velocity.on_update_model_value(self.calculate)
-        self.add_extra = QBtn(label="Add Extra").on_click(self._add_extra)
+        # self.velocity.on_update_model_value(self.calculate)
+        self.add_extra = Row(QBtn(round=True,
+                                  icon="add",
+                                  fab=True
+                                  ).on_click(self._add_extra),
+                             classes="items-center")
         self.clear_btn = QBtn(label="Clear").on_click(self.clear)
-        self.extras = Div()
+        self.calc_btn = QBtn(label="Validate").on_click(self.calculate)
+        self.extras = Row()
         self.velocity_sol = SolutionWebgui(
-            caption="Velocity", id="velocity_sol", show_clipping=False, show_view=False
+            caption="Velocity", show_clipping=False, show_view=False
         )
         self.pressure_sol = SolutionWebgui(
-            caption="Pressure", id="pressure_sol", show_clipping=False, show_view=False
+            caption="Pressure", show_clipping=False, show_view=False
         )
         self.user_warning = UserWarning(
             title="Error in calculation!", message="Pairing does not seem to work"
         )
 
+        self.cards = Row(self.mesh, self.pressure, self.velocity, self.extras,
+                         self.add_extra)
+        self.computing = QInnerLoading(
+            QSpinnerGears(size="100px", color="primary"),
+            Centered("Calculating..."),
+            showing=True,
+            style="z-index:100;")
+        self.computing.hidden = True
+
+        self.result_section = Row(
+            self.computing,
+            Col(Heading("Velocity", level=3), self.velocity_sol),
+            Col(Heading("Pressure", level=3), self.pressure_sol),
+        )
         self.component = Centered(
             Col(
                 self.user_warning,
-                self.mesh,
-                self.pressure,
-                self.velocity,
-                self.extras,
-                Row(self.add_extra, self.clear_btn),
-                Row(
-                    Col(Heading("Velocity", level=3), self.velocity_sol),
-                    Col(Heading("Pressure", level=3), self.pressure_sol),
-                ),
+                self.cards, 
+                Row(self.clear_btn, self.calc_btn),
+                self.result_section,
                 classes="q-gutter-lg q-ma-lg",
             )
         )
 
     def clear(self):
         self.extras.children = []
-        self.mesh.model_value = None
-        self.pressure.model_value = None
-        self.velocity.model_value = None
+        self.mesh.model_value = "None"
+        self.mesh.update()
+        self.pressure.model_value = "None"
+        self.pressure.update()
+        self.velocity.model_value = "None"
+        self.velocity.update()
         self.velocity_sol._webgui.clear()
         self.pressure_sol._webgui.clear()
 
     def _add_extra(self):
         i = len(self.extras.children)
-        extra = QSelect(
+        extra = CardSelector(
             label="Extra " + str(i + 1),
-            id=f"extra_{i}",
-            options=[
-                "Interior Penalty",
-                "Pressure-Jump",
-                "Powell-Sabin Split",
-                "Alfeld Split",
-                "Brezzi-Pitkäranta",
-                "P3 Bubble",
-            ],
+            options = extra_cards,
         )
-        extra.on_update_model_value(self.calculate)
+        # extra.on_update_model_value(self.calculate)
         self.extras.children = self.extras.children + [extra]
 
     def calculate(self):
         if self.mesh.model_value is None:
             return
+        self.computing.hidden = False
         mesh = self._create_mesh()
         if self.velocity.model_value is None or self.pressure.model_value is None:
             self.velocity_sol.draw(mesh)
             self.pressure_sol.draw(mesh)
+            self.computing.hidden = True
             return
         try:
             self._solve_stokes(mesh)
@@ -115,6 +175,7 @@ class FeStokesRePair(App):
             self.user_warning.show()
             self.velocity_sol._webgui.clear()
             self.pressure_sol._webgui.clear()
+        self.computing.hidden = True
 
     def _create_mesh(self):
         import ngsolve.meshes as ngs_meshes
