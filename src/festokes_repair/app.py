@@ -252,21 +252,29 @@ class FeStokesRePair(App):
         assert self.velocity.model_value is not None
         assert self.pressure.model_value is not None
         print("Create Velocity space")
+        extras = [e.model_value for e in self.extras.children]
+        if ("Interior Penalty" in extras) or ("Pressure-Jump" in extras):
+            dgjumps = True
+        else:
+            dgjumps = False
         if self.velocity.model_value == "Crouzeix-Raviart":
             print("Create Crouzeix-Raviart")
-            V = ngs.FESpace("nonconforming", mesh, order=1, dirichlet="top|left") ** 2
+            V = ngs.FESpace("nonconforming", mesh, order=1, dirichlet="top|left",
+                            dgjumps=dgjumps) ** 2
         elif self.velocity.model_value.startswith("BDM"):
             print("Create BDM of order", self.velocity.model_value[-1])
-            V = ngs.HDiv(mesh, order=int(self.velocity.model_value[-1]))
+            V = ngs.HDiv(mesh, order=int(self.velocity.model_value[-1]),
+                         dgjumps=dgjumps)
         else:
             order = int(self.velocity.model_value[1])
             print("Create P", order)
-            V = ngs.VectorH1(mesh, order=order, dirichlet="top|left")
             if self.velocity.model_value.endswith("*"):
-                print("Make discontinuous")
-                V = ngs.Discontinuous(V)
+                V = ngs.VectorL2(mesh, order=order, dgjumps=dgjumps)
+            else:
+                V = ngs.VectorH1(mesh, order=order, dgjumps=dgjumps,
+                                 dirichlet="top|left")
         bubble_space = False
-        if "P3 Bubble" in [e.model_value for e in self.extras.children]:
+        if "P3 Bubble" in extras:
             bubble_space = True
             print("Add P3 Bubble")
             Vhs = ngs.VectorH1(mesh, order=3)
@@ -294,17 +302,51 @@ class FeStokesRePair(App):
             gradv = ngs.Grad(v) + ngs.Grad(vb)
             divu = ngs.div(u) + ngs.div(ub)
             divv = ngs.div(v) + ngs.div(vb)
+            uOther, vOther = u.Other() + ub.Other(), v.Other() + vb.Other()
+            graduOther, gradvOther = ngs.Grad(u.Other())+ngs.Grad(ub.Other()), ngs.Grad(v.Other())+ngs.Grad(vb.Other())
         else:
             (u, p), (v, q) = fes.TnT()
             gradu, gradv = ngs.Grad(u), ngs.Grad(v)
             divu, divv = ngs.div(u), ngs.div(v)
+            uOther, vOther = u.Other(), v.Other()
+            graduOther, gradvOther = ngs.Grad(u.Other()), ngs.Grad(v.Other())
+
 
         stokes = (
             ngs.InnerProduct(gradu, gradv) * ngs.dx
             + divu * q * ngs.dx
             + divv * p * ngs.dx
         )
-        a = ngs.BilinearForm(stokes).Assemble()
+
+        def avg(u):
+            return 0.5 * (u.Other() + u)
+        def jump(u):
+            return u - u.Other()
+        a = ngs.BilinearForm(stokes)
+        n = ngs.specialcf.normal(mesh.dim)
+        h = ngs.specialcf.mesh_size
+        if "Interior Penalty" in extras:
+            k = V.globalorder
+            a += 0.5*(-gradu*n-graduOther*n) * (v-vOther) * ngs.dx(skeleton=True)
+            a += 0.5*(-gradv*n-gradvOther*n) * (u-uOther) * ngs.dx(skeleton=True)
+            a += avg(p) * (v-vOther) * n * ngs.dx(skeleton=True)
+            a += avg(q) * (u-uOther) * n * ngs.dx(skeleton=True)
+            a += 10* (k+1)**2 / h * (u-uOther) * (v-vOther) * ngs.dx(skeleton=True)
+            a += -gradu*n * v * ngs.ds(skeleton=True)
+            a += -gradv*n * u * ngs.ds(skeleton=True)
+            a += p*n * v * ngs.ds(skeleton=True)
+            a += q*n * u * ngs.ds(skeleton=True)
+            a += 10* (k+1)**2 / h * u * v * ngs.ds(skeleton=True)
+        if "graddiv" in extras:
+            a += 1e3 * divu * divv * ngs.dx
+            a += 1e3 * u*n * v*n * ngs.dx(skeleton=True)
+        if "Brezzi-Pitkäranta" in extras:
+            a += -h**2 * ngs.grad(p) * ngs.grad(q) * ngs.dx
+        if "Pressure-Jump" in extras:
+            a += -h * jump(p) * jump(q) * ngs.dx(skeleton=True)
+
+
+        a.Assemble()
         gf = ngs.GridFunction(fes)
         if bubble_space:
             gfu, gfb, gfp = gf.components
