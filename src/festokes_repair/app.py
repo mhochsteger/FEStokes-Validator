@@ -14,49 +14,49 @@ def image(filename):
 
 
 mesh_cards = {
-    "Unstructured Mesh": {"image": "mesh/stdmesh.webp"},
-    "Curved Mesh": {"image": "mesh/curvedmesh.webp"},
-    "Type One Mesh": {"image": "mesh/typeonemesh.webp"},
-    "Singular Vertex Mesh": {"image": "mesh/crisscross.webp"},
-    "None": {"image": "mesh/emptymesh.webp"},
+    "Unstructured Mesh": {"image": "mesh/stdmesh.webp", "points": 2},
+    "Curved Mesh": {"image": "mesh/curvedmesh.webp", "points": 4},
+    "Type One Mesh": {"image": "mesh/typeonemesh.webp", "points": 1},
+    "Singular Vertex Mesh": {"image": "mesh/crisscross.webp", "points": 3},
+    "None": {"image": "mesh/emptymesh.webp", "points": 0},
 }
 
 pressure_cards = {
-    "P0": {"image": "pressure/Pzeropressure.webp"},
-    "P1": {"image": "pressure/Ponepressure.webp"},
-    "P1*": {"image": "pressure/Ponedpressure.webp"},
-    "P2": {"image": "pressure/Ptwopressure.webp"},
-    "P2*": {"image": "pressure/Ptwodpressure.webp"},
-    "P3": {"image": "pressure/Pthreepressure.webp"},
-    "P3*": {"image": "pressure/Pthreedpressure.webp"},
-    "None": {"image": "pressure/emptypressure.webp"},
+    "P0": {"image": "pressure/Pzeropressure.webp", "points": 1},
+    "P1": {"image": "pressure/Ponepressure.webp", "points": 2},
+    "P1*": {"image": "pressure/Ponedpressure.webp", "points": 2},
+    "P2": {"image": "pressure/Ptwopressure.webp", "points": 3},
+    "P2*": {"image": "pressure/Ptwodpressure.webp", "points": 3},
+    "P3": {"image": "pressure/Pthreepressure.webp", "points": 4},
+    "P3*": {"image": "pressure/Pthreedpressure.webp", "points": 4},
+    "None": {"image": "pressure/emptypressure.webp", "points": 0},
 }
 
 velocity_cards = {
-    "P1": {"image": "velocity/Ponevel.webp"},
-    "P1*": {"image": "velocity/Ponedvel.webp"},
-    "BDM1": {"image": "velocity/BDMonevel.webp"},
-    "Crouzeix-Raviart": {"image": "velocity/CRvel.webp"},
-    "P2": {"image": "velocity/Ptwovel.webp"},
-    "P2*": {"image": "velocity/Ptwodvel.webp"},
-    "BDM2": {"image": "velocity/BDMtwovel.webp"},
-    "P3": {"image": "velocity/Pthreevel.webp"},
-    "P3*": {"image": "velocity/Pthreedvel.webp"},
-    "BDM3": {"image": "velocity/BDMthreevel.webp"},
-    "BDM4": {"image": "velocity/BDMfourvel.webp"},
-    "P4": {"image": "velocity/Pfourvel.webp"},
-    "P4*": {"image": "velocity/Pfourdvel.webp"},
-    "None": {"image": "velocity/emptyvel.webp"},
+    "P1": {"image": "velocity/Ponevel.webp", "points": 4},
+    "P1*": {"image": "velocity/Ponedvel.webp", "points": 4},
+    "BDM1": {"image": "velocity/BDMonevel.webp", "points": 4},
+    "Crouzeix-Raviart": {"image": "velocity/CRvel.webp", "points": 4},
+    "P2": {"image": "velocity/Ptwovel.webp", "points": 3},
+    "P2*": {"image": "velocity/Ptwodvel.webp", "points": 3},
+    "BDM2": {"image": "velocity/BDMtwovel.webp", "points": 3},
+    "P3": {"image": "velocity/Pthreevel.webp", "points": 2},
+    "P3*": {"image": "velocity/Pthreedvel.webp", "points": 2},
+    "BDM3": {"image": "velocity/BDMthreevel.webp", "points": 2},
+    "BDM4": {"image": "velocity/BDMfourvel.webp", "points": 1},
+    "P4": {"image": "velocity/Pfourvel.webp", "points": 1},
+    "P4*": {"image": "velocity/Pfourdvel.webp", "points": 1},
+    "None": {"image": "velocity/emptyvel.webp", "points": 0},
 }
 
 extra_cards = {
-    "Interior Penalty": {"image": "extra/ipdg.webp"},
-    "Pressure-Jump": {"image": "extra/pj.webp"},
-    "Powell-Sabin Split": {"image": "extra/psmesh.webp"},
-    "Alfeld Split": {"image": "extra/alfeldsplit.webp"},
-    "Brezzi-Pitkäranta": {"image": "extra/bp.webp"},
-    "P3 Bubble": {"image": "extra/Pthreebubble.webp"},
-    "None": {"image": "extra/emptyextra.webp"},
+    "Interior Penalty": {"image": "extra/ipdg.webp", "points": 0},
+    "Pressure-Jump": {"image": "extra/pj.webp", "points": -1},
+    "Powell-Sabin Split": {"image": "extra/psmesh.webp", "points": -1},
+    "Alfeld Split": {"image": "extra/alfeldsplit.webp", "points": -1},
+    "Brezzi-Pitkäranta": {"image": "extra/bp.webp", "points": -2},
+    "P3 Bubble": {"image": "extra/Pthreebubble.webp", "points": -1},
+    "None": {"image": "extra/emptyextra.webp", "points": 0},
 }
 
 
@@ -84,6 +84,13 @@ class CardSelector(QCard):
     @property
     def model_value(self):
         return self.selector.model_value
+
+    @property
+    def points(self):
+        try: 
+            return self._options[self.selector.model_value]["points"]
+        except:
+            return 0
 
     @model_value.setter
     def model_value(self, value):
@@ -115,6 +122,13 @@ class FeStokesRePair(App):
         )
         self.clear_btn = QBtn(label="Clear").on_click(self.clear)
         self.calc_btn = QBtn(label="Validate").on_click(self.calculate)
+        self.bpoints_lbl = Label("Basic points:", classes="text-h6 q-mt-md")
+        self.bpoints_dsp = Label(" -?- ", classes="text-h6 q-mt-md")
+        self.optconv_lbl = Label("Optimal convergence:", classes="text-h6 q-mt-md")
+        self.optconv_dsp = Label(" -?- ", classes="text-h6 q-mt-md")
+        self.prrob_lbl = Label("Pressure robustness:", classes="text-h6 q-mt-md")
+        self.prrob_dsp = Label(" -?- ", classes="text-h6 q-mt-md")
+
         self.extras = Row()
         self.velocity_sol = SolutionWebgui(
             caption="Velocity", show_clipping=False, show_view=False
@@ -146,7 +160,10 @@ class FeStokesRePair(App):
             Col(
                 self.user_warning,
                 self.cards,
-                Row(self.clear_btn, self.calc_btn),
+                Row(self.clear_btn, self.calc_btn, 
+                    QSeparator(spaced=True, vertical=True), self.bpoints_lbl, self.bpoints_dsp,
+                    QSeparator(spaced=True, vertical=True), self.optconv_lbl, self.optconv_dsp,
+                    QSeparator(spaced=True, vertical=True), self.prrob_lbl, self.prrob_dsp),
                 self.result_section,
                 classes="q-gutter-lg q-ma-lg",
             )
@@ -162,6 +179,7 @@ class FeStokesRePair(App):
         self.velocity.update()
         self.velocity_sol._webgui.clear()
         self.pressure_sol._webgui.clear()
+        self.bpoints_dsp.text = " --- "
 
     def _add_extra(self):
         i = len(self.extras.children)
@@ -191,6 +209,15 @@ class FeStokesRePair(App):
             self.velocity_sol._webgui.clear()
             self.pressure_sol._webgui.clear()
         self.computing.hidden = True
+
+        bpoints = 0
+        bpoints += self.mesh.points
+        bpoints += self.pressure.points
+        bpoints += self.velocity.points
+        for e in self.extras.children:
+            bpoints += e.points
+
+        self.bpoints_dsp.text = str(bpoints)
 
     def _create_mesh(self):
         import ngsolve.meshes as ngs_meshes
