@@ -115,6 +115,11 @@ class FeStokesRePair(App):
             label="Velocity",
             options=velocity_cards,
         )
+
+        # self.mesh.model_value = "Unstructured Mesh"
+        # self.pressure.model_value = "P0"
+        # self.velocity.model_value = "P2"
+
         # self.velocity.on_update_model_value(self.calculate)
         self.add_extra = Row(
             QBtn(round=True, icon="add", fab=True).on_click(self._add_extra),
@@ -221,15 +226,29 @@ class FeStokesRePair(App):
 
     def _create_mesh(self):
         import ngsolve.meshes as ngs_meshes
-
+        from math import pi
         print("Create mesh")
-        if self.mesh.model_value in ["Unstructured Mesh", "Curved Mesh"]:
-            shape = ngocc.Rectangle(2, 0.41).Circle(0.2, 0.2, 0.05).Reverse().Face()
-            shape.edges.name = "top"
-            shape.edges.Min(ngocc.X).name = "left"
-            shape.edges.Max(ngocc.X).name = "right"
+        self.uexact = ngs.CF((ngs.sin(pi*ngs.x)*ngs.cos(pi*ngs.y), -ngs.cos(pi*ngs.x)*ngs.sin(pi*ngs.y)))
+        self.uexactbnd = self.uexact
+        self.pexact = ngs.sin(pi*ngs.x)*ngs.cos(pi*ngs.y)         
+        self.m_nu_lap_u_exact = ngs.CF((- self.uexact[0].Diff(ngs.x).Diff(ngs.x) - self.uexact[0].Diff(ngs.y).Diff(ngs.y),
+                    - self.uexact[1].Diff(ngs.x).Diff(ngs.x) - self.uexact[1].Diff(ngs.y).Diff(ngs.y)))
+        self.nabla_p_exact = ngs.CF((self.pexact.Diff(ngs.x), self.pexact.Diff(ngs.y)))
+
+        if self.mesh.model_value == "Unstructured Mesh":
+            geo = ngocc.unit_square
+            mesh = ngs.Mesh(geo.GenerateMesh(maxh=0.25))
+        elif self.mesh.model_value == "Curved Mesh":
+            shape = ngocc.Circle((0., 0.), 1).Face()
+            shape.edges.name = "bnd"
             geo = ngocc.OCCGeometry(shape, dim=2)
-            mesh = ngs.Mesh(geo.GenerateMesh(maxh=0.05))
+            mesh = ngs.Mesh(geo.GenerateMesh(maxh=1))
+
+            r = ngs.sqrt(ngs.x**2 + ngs.y**2)
+            self.uexact = ngs.CF((ngs.cos(0.5*pi*r)*ngs.y, -ngs.cos(0.5*pi*r)*ngs.x))
+            self.uexactbnd = ngs.CF((0,0))
+            self.pexact = ngs.sin(pi*ngs.x)*ngs.cos(pi*ngs.y)         
+
         elif self.mesh.model_value == "Type One Mesh":
             mesh = ngs_meshes.MakeStructured2DMesh(quads=False, nx=10, ny=10)
         else:  # self.mesh.model_value == "Singular Vertex Mesh":
@@ -259,7 +278,7 @@ class FeStokesRePair(App):
             dgjumps = False
         if self.velocity.model_value == "Crouzeix-Raviart":
             print("Create Crouzeix-Raviart")
-            V = ngs.FESpace("nonconforming", mesh, order=1, dirichlet="top|left",
+            V = ngs.FESpace("nonconforming", mesh, order=1, dirichlet=".*",
                             dgjumps=dgjumps) ** 2
         elif self.velocity.model_value.startswith("BDM"):
             print("Create BDM of order", self.velocity.model_value[-1])
@@ -272,7 +291,7 @@ class FeStokesRePair(App):
                 V = ngs.VectorL2(mesh, order=order, dgjumps=dgjumps)
             else:
                 V = ngs.VectorH1(mesh, order=order, dgjumps=dgjumps,
-                                 dirichlet="top|left")
+                                 dirichlet=".*")
         bubble_space = False
         if "P3 Bubble" in extras:
             bubble_space = True
@@ -297,11 +316,12 @@ class FeStokesRePair(App):
         fes = V * Q
         if bubble_space:
             print("in bubble space")
-            (u, ub, p), (v, vb, q) = fes.TnT()
+            (us, ub, p), (vs, vb, q) = fes.TnT()
             gradu = ngs.Grad(u) + ngs.Grad(ub)
             gradv = ngs.Grad(v) + ngs.Grad(vb)
             divu = ngs.div(u) + ngs.div(ub)
             divv = ngs.div(v) + ngs.div(vb)
+            u, v = us + ub, vs + vb
             uOther, vOther = u.Other() + ub.Other(), v.Other() + vb.Other()
             graduOther, gradvOther = ngs.Grad(u.Other())+ngs.Grad(ub.Other()), ngs.Grad(v.Other())+ngs.Grad(vb.Other())
         else:
@@ -316,6 +336,7 @@ class FeStokesRePair(App):
             ngs.InnerProduct(gradu, gradv) * ngs.dx
             + divu * q * ngs.dx
             + divv * p * ngs.dx
+            - 1e-8 * p * q * ngs.dx  # to allow for sparsecholesky
         )
 
         def avg(u):
@@ -323,6 +344,7 @@ class FeStokesRePair(App):
         def jump(u):
             return u - u.Other()
         a = ngs.BilinearForm(stokes)
+        f = ngs.LinearForm((self.m_nu_lap_u_exact + self.nabla_p_exact)*v*ngs.dx)
         n = ngs.specialcf.normal(mesh.dim)
         h = ngs.specialcf.mesh_size
         if "Interior Penalty" in extras:
@@ -337,6 +359,11 @@ class FeStokesRePair(App):
             a += p*n * v * ngs.ds(skeleton=True)
             a += q*n * u * ngs.ds(skeleton=True)
             a += 10* (k+1)**2 / h * u * v * ngs.ds(skeleton=True)
+
+            f += -gradv*n * self.uexactbnd * ngs.ds(skeleton=True)
+            f += q*n * self.uexactbnd * ngs.ds(skeleton=True)
+            f += 10* (k+1)**2 / h * self.uexactbnd * v * ngs.ds(skeleton=True)
+
         if "graddiv" in extras:
             a += 1e3 * divu * divv * ngs.dx
             a += 1e3 * u*n * v*n * ngs.dx(skeleton=True)
@@ -346,7 +373,10 @@ class FeStokesRePair(App):
             a += -h * jump(p) * jump(q) * ngs.dx(skeleton=True)
 
 
+
+
         a.Assemble()
+        f.Assemble()
         gf = ngs.GridFunction(fes)
         if bubble_space:
             gfu, gfb, gfp = gf.components
@@ -354,10 +384,12 @@ class FeStokesRePair(App):
         else:
             gfu, gfp = gf.components
             vel = gfu
-        uin = ngs.CF((1.5 * 4 * ngs.y * (0.41 - ngs.y) / (0.41 * 0.41), 0))
-        gfu.Set(uin, definedon=mesh.Boundaries("left"))
+        #uin = ngs.CF((1.5 * 4 * ngs.y * (0.41 - ngs.y) / (0.41 * 0.41), 0))
+        gfu.Set(self.uexactbnd, definedon=mesh.Boundaries(".*"))
         res = (-a.mat * gf.vec).Evaluate()
-        inv = ngs.directsolvers.SuperLU(a.mat, fes.FreeDofs())
+        res += f.vec
+        inv = a.mat.Inverse(inverse="sparsecholesky", freedofs=fes.FreeDofs())
+        #inv = ngs.directsolvers.SuperLU(a.mat, fes.FreeDofs())
         gf.vec.data += inv * res
         self.velocity_sol.draw(vel, mesh)
         self.pressure_sol.draw(gfp, mesh)
