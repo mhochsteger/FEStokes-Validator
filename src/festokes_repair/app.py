@@ -116,9 +116,9 @@ class FeStokesRePair(App):
             options=velocity_cards,
         )
 
-        # self.mesh.model_value = "Unstructured Mesh"
-        # self.pressure.model_value = "P0"
-        # self.velocity.model_value = "P2"
+        #self.mesh.model_value = "Unstructured Mesh"
+        #self.pressure.model_value = "P1"
+        #self.velocity.model_value = "P2"
 
         # self.velocity.on_update_model_value(self.calculate)
         self.add_extra = Row(
@@ -206,7 +206,7 @@ class FeStokesRePair(App):
             self.computing.hidden = True
             return
         try:
-            self._solve_stokes(mesh)
+            self._solve_stokes_n()
         except Exception as e:
             print("caught exception", e)
             self.user_warning.message = str(e)
@@ -224,20 +224,20 @@ class FeStokesRePair(App):
 
         self.bpoints_dsp.text = str(bpoints)
 
-    def _create_mesh(self):
+    def _create_mesh(self, ref_lvl=0):
         import ngsolve.meshes as ngs_meshes
         from math import pi
         print("Create mesh")
         self.uexact = ngs.CF((ngs.sin(pi*ngs.x)*ngs.cos(pi*ngs.y), -ngs.cos(pi*ngs.x)*ngs.sin(pi*ngs.y)))
         self.uexactbnd = self.uexact
         self.pexact = ngs.sin(pi*ngs.x)*ngs.cos(pi*ngs.y)         
-        self.m_nu_lap_u_exact = ngs.CF((- self.uexact[0].Diff(ngs.x).Diff(ngs.x) - self.uexact[0].Diff(ngs.y).Diff(ngs.y),
-                    - self.uexact[1].Diff(ngs.x).Diff(ngs.x) - self.uexact[1].Diff(ngs.y).Diff(ngs.y)))
-        self.nabla_p_exact = ngs.CF((self.pexact.Diff(ngs.x), self.pexact.Diff(ngs.y)))
 
         if self.mesh.model_value == "Unstructured Mesh":
             geo = ngocc.unit_square
             mesh = ngs.Mesh(geo.GenerateMesh(maxh=0.25))
+            if ref_lvl > 0:
+                for _ in range(ref_lvl):
+                    mesh.ngmesh.Refine()
         elif self.mesh.model_value == "Curved Mesh":
             shape = ngocc.Circle((0., 0.), 1).Face()
             shape.edges.name = "bnd"
@@ -249,23 +249,42 @@ class FeStokesRePair(App):
             self.uexactbnd = ngs.CF((0,0))
             self.pexact = ngs.sin(pi*ngs.x)*ngs.cos(pi*ngs.y)         
 
+            if ref_lvl > 0:
+                for _ in range(ref_lvl):
+                    mesh.ngmesh.Refine()
+
         elif self.mesh.model_value == "Type One Mesh":
-            mesh = ngs_meshes.MakeStructured2DMesh(quads=False, nx=10, ny=10)
+            mesh = ngs_meshes.MakeStructured2DMesh(quads=False, nx=2**(ref_lvl+1), ny=2**(ref_lvl+1))
         else:  # self.mesh.model_value == "Singular Vertex Mesh":
-            mesh = ngs_meshes.MakeStructured2DMesh(quads=True, nx=10, ny=10)
+            mesh = ngs_meshes.MakeStructured2DMesh(quads=True, nx=2**(ref_lvl+1), ny=2**(ref_lvl+1))
             # split quads in 4 trigs?
         for e in self.extras.children:
             if e.model_value == "Alfeld Split":
+                #mesh.ngmesh.Save("tmp.vol")
+                #mesh = Mesh("tmp.vol")
+                mesh.ngmesh.Compress()
                 ngmesh = mesh.ngmesh
                 ngmesh.SplitAlfeld()
                 mesh = ngs.Mesh(ngmesh)
             elif e.model_value == "Powell-Sabin Split":
+                #mesh.ngmesh.Save("tmp.vol")
+                #mesh = Mesh("tmp.vol")
+                mesh.ngmesh.Compress()
                 ngmesh = mesh.ngmesh
                 ngmesh.SplitPowellSabin()
                 mesh = ngs.Mesh(ngmesh)
         if self.mesh.model_value == "Curved Mesh":
             mesh.Curve(5)
+
+
+        self.graduexact = ngs.CF((self.uexact[0].Diff(ngs.x),self.uexact[0].Diff(ngs.y),                    
+                                  self.uexact[1].Diff(ngs.x),self.uexact[1].Diff(ngs.y)),dims=(2,2))
+        self.m_nu_lap_u_exact = ngs.CF((- self.uexact[0].Diff(ngs.x).Diff(ngs.x) - self.uexact[0].Diff(ngs.y).Diff(ngs.y),
+                    - self.uexact[1].Diff(ngs.x).Diff(ngs.x) - self.uexact[1].Diff(ngs.y).Diff(ngs.y)))
+        self.nabla_p_exact = ngs.CF((self.pexact.Diff(ngs.x), self.pexact.Diff(ngs.y)))
+
         return mesh
+
 
     def _solve_stokes(self, mesh):
         assert self.velocity.model_value is not None
@@ -334,8 +353,8 @@ class FeStokesRePair(App):
 
         stokes = (
             ngs.InnerProduct(gradu, gradv) * ngs.dx
-            + divu * q * ngs.dx
-            + divv * p * ngs.dx
+            - divu * q * ngs.dx
+            - divv * p * ngs.dx
             - 1e-8 * p * q * ngs.dx  # to allow for sparsecholesky
         )
 
@@ -353,16 +372,16 @@ class FeStokesRePair(App):
             a += 0.5*(-gradv*n-gradvOther*n) * (u-uOther) * ngs.dx(skeleton=True)
             a += avg(p) * (v-vOther) * n * ngs.dx(skeleton=True)
             a += avg(q) * (u-uOther) * n * ngs.dx(skeleton=True)
-            a += 10* (k+1)**2 / h * (u-uOther) * (v-vOther) * ngs.dx(skeleton=True)
+            a += 20* (k+1)**2 / h * (u-uOther) * (v-vOther) * ngs.dx(skeleton=True)
             a += -gradu*n * v * ngs.ds(skeleton=True)
             a += -gradv*n * u * ngs.ds(skeleton=True)
             a += p*n * v * ngs.ds(skeleton=True)
             a += q*n * u * ngs.ds(skeleton=True)
-            a += 10* (k+1)**2 / h * u * v * ngs.ds(skeleton=True)
+            a += 20* (k+1)**2 / h * u * v * ngs.ds(skeleton=True)
 
             f += -gradv*n * self.uexactbnd * ngs.ds(skeleton=True)
             f += q*n * self.uexactbnd * ngs.ds(skeleton=True)
-            f += 10* (k+1)**2 / h * self.uexactbnd * v * ngs.ds(skeleton=True)
+            f += 20* (k+1)**2 / h * self.uexactbnd * v * ngs.ds(skeleton=True)
 
         if "graddiv" in extras:
             a += 1e3 * divu * divv * ngs.dx
@@ -381,9 +400,13 @@ class FeStokesRePair(App):
         if bubble_space:
             gfu, gfb, gfp = gf.components
             vel = gfu + gfb
+            gradvel = ngs.Grad(gfu) + ngs.Grad(gfb)
+            divuh = ngs.div(gfu) + ngs.div(gfb)
         else:
             gfu, gfp = gf.components
             vel = gfu
+            gradvel = ngs.Grad(gfu)
+            divuh = ngs.div(gfu)
         #uin = ngs.CF((1.5 * 4 * ngs.y * (0.41 - ngs.y) / (0.41 * 0.41), 0))
         gfu.Set(self.uexactbnd, definedon=mesh.Boundaries(".*"))
         res = (-a.mat * gf.vec).Evaluate()
@@ -391,5 +414,57 @@ class FeStokesRePair(App):
         inv = a.mat.Inverse(inverse="sparsecholesky", freedofs=fes.FreeDofs())
         #inv = ngs.directsolvers.SuperLU(a.mat, fes.FreeDofs())
         gf.vec.data += inv * res
+
+        offset_p = ngs.Integrate(gfp-self.pexact, mesh)/ngs.Integrate(1, mesh)
+        p = gfp - offset_p
+
+        return (vel, gradvel, divuh, gfu.space.globalorder), (p, gfp.space.globalorder)
+
+    def _solve_stokes_n(self, nref=4):
+        error_v_divl2 = []
+        error_v_l2 = []
+        error_v_h1semi = []
+        error_v_h1semi2 = []
+        error_p_l2 = []
+        for ref in range(nref):
+            mesh = self._create_mesh(ref)
+            (vel, gradvel, divuh, velorder), (gfp, porder) = self._solve_stokes(mesh)
+            error_v_l2.append(ngs.sqrt(ngs.Integrate((vel-self.uexact)**2, mesh)))
+            error_v_h1semi.append(ngs.sqrt(ngs.Integrate(ngs.InnerProduct(gradvel-self.graduexact,gradvel-self.graduexact), mesh)))
+            error_v_divl2.append(ngs.sqrt(ngs.Integrate(divuh**2, mesh)))
+            error_p_l2.append(ngs.sqrt(ngs.Integrate((gfp-self.pexact)**2, mesh)))
+        from math import log
+        eoc_v_h1 = log(error_v_h1semi[-1]/error_v_h1semi[-2])/log(0.5)
+        eoc_p_l2 = log(error_p_l2[-1]/error_p_l2[-2])/log(0.5)
+
+
+        opt_rates = True
+        convergence = False
+
+        verbose = False
+        if eoc_v_h1 - velorder > - 0.25:
+            if verbose:     
+                print("velocity H1(semi) error optimal")
+        else:
+            opt_rates = False    
+
+        if eoc_v_h1 > 0.25 and eoc_p_l2 > 0.25:
+            convergence = True
+        else: 
+            if verbose:     
+                print("no convergence")
+
+        if eoc_p_l2 - porder - 1 > - 0.25:
+            if verbose:     
+                print("pressure L2 error optimal")
+        else:
+            opt_rates = False    
+
+        if opt_rates:
+            self.optconv_dsp.text = "2"
+        else:
+            self.optconv_dsp.text = "0"
+
         self.velocity_sol.draw(vel, mesh)
         self.pressure_sol.draw(gfp, mesh)
+
