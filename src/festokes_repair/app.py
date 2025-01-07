@@ -116,9 +116,9 @@ class FeStokesRePair(App):
             options=velocity_cards,
         )
 
-        self.mesh.model_value = "Unstructured Mesh"
-        self.pressure.model_value = "P1"
-        self.velocity.model_value = "P2"
+        #self.mesh.model_value = "Unstructured Mesh"
+        #self.pressure.model_value = "P1"
+        #self.velocity.model_value = "P2"
 
         # self.velocity.on_update_model_value(self.calculate)
         self.add_extra = Row(
@@ -420,7 +420,7 @@ class FeStokesRePair(App):
 
         return (vel, gradvel, divuh, gfu.space.globalorder), (p, gfp.space.globalorder)
 
-    def _solve_stokes_n(self, nref=3):
+    def _solve_stokes_n(self, nref=4):
         error_v_divl2 = []
         error_v_l2 = []
         error_v_h1semi = []
