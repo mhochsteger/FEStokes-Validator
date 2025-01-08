@@ -426,6 +426,9 @@ class FeStokesRePair(App):
         error_v_h1semi = []
         error_v_h1semi2 = []
         error_p_l2 = []
+        if "Alfeld Split" in [e.model_value for e in self.extras.children]:
+            nref = 1
+            print("Alfeld Split and refinement do not work together yet")
         for ref in range(nref):
             mesh = self._create_mesh(ref)
             (vel, gradvel, divuh, velorder), (gfp, porder) = self._solve_stokes(mesh)
@@ -433,37 +436,40 @@ class FeStokesRePair(App):
             error_v_h1semi.append(ngs.sqrt(ngs.Integrate(ngs.InnerProduct(gradvel-self.graduexact,gradvel-self.graduexact), mesh)))
             error_v_divl2.append(ngs.sqrt(ngs.Integrate(divuh**2, mesh)))
             error_p_l2.append(ngs.sqrt(ngs.Integrate((gfp-self.pexact)**2, mesh)))
-        from math import log
-        eoc_v_h1 = log(error_v_h1semi[-1]/error_v_h1semi[-2])/log(0.5)
-        eoc_p_l2 = log(error_p_l2[-1]/error_p_l2[-2])/log(0.5)
+        if nref > 1:
+            from math import log
+            eoc_v_h1 = log(error_v_h1semi[-1]/error_v_h1semi[-2])/log(0.5)
+            eoc_p_l2 = log(error_p_l2[-1]/error_p_l2[-2])/log(0.5)
 
 
-        opt_rates = True
-        convergence = False
+            opt_rates = True
+            convergence = False
 
-        verbose = False
-        if eoc_v_h1 - velorder > - 0.25:
-            if verbose:     
-                print("velocity H1(semi) error optimal")
+            verbose = False
+            if eoc_v_h1 - velorder > - 0.25:
+                if verbose:
+                    print("velocity H1(semi) error optimal")
+            else:
+                opt_rates = False
+
+            if eoc_v_h1 > 0.25 and eoc_p_l2 > 0.25:
+                convergence = True
+            else:
+                if verbose:
+                    print("no convergence")
+
+            if eoc_p_l2 - porder - 1 > - 0.25:
+                if verbose:
+                    print("pressure L2 error optimal")
+            else:
+                opt_rates = False
+
+            if opt_rates:
+                self.optconv_dsp.text = "2"
+            else:
+                self.optconv_dsp.text = "0"
         else:
-            opt_rates = False    
-
-        if eoc_v_h1 > 0.25 and eoc_p_l2 > 0.25:
-            convergence = True
-        else: 
-            if verbose:     
-                print("no convergence")
-
-        if eoc_p_l2 - porder - 1 > - 0.25:
-            if verbose:     
-                print("pressure L2 error optimal")
-        else:
-            opt_rates = False    
-
-        if opt_rates:
-            self.optconv_dsp.text = "2"
-        else:
-            self.optconv_dsp.text = "0"
+            self.optconv_dsp.text = " -?- "
 
         self.velocity_sol.draw(vel, mesh)
         self.pressure_sol.draw(gfp, mesh)
