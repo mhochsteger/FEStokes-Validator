@@ -426,9 +426,10 @@ class FeStokesRePair(App):
         error_v_h1semi = []
         error_v_h1semi2 = []
         error_p_l2 = []
-        if "Alfeld Split" in [e.model_value for e in self.extras.children]:
+        if "Alfeld Split" in [e.model_value for e in self.extras.children] or \
+           "Powell-Sabin Split" in [e.model_value for e in self.extras.children]:
             nref = 1
-            print("Alfeld Split and refinement do not work together yet")
+            print("Alfeld/Powell-Sabin Split and refinement do not work together yet")
         for ref in range(nref):
             mesh = self._create_mesh(ref)
             (vel, gradvel, divuh, velorder), (gfp, porder) = self._solve_stokes(mesh)
