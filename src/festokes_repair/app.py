@@ -1,7 +1,7 @@
 from webapp_client.app import App
 from webapp_client.components import *
 from webapp_client.qcomponents import *
-from webapp_client.visualization import SolutionWebgui
+from webapp_client.visualization import SolutionWebgui, PlotlyComponent
 from webapp_client.utils import load_image
 import netgen.occ as ngocc
 import ngsolve as ngs
@@ -141,6 +141,7 @@ class FeStokesRePair(App):
         self.pressure_sol = SolutionWebgui(
             caption="Pressure", show_clipping=False, show_view=False
         )
+        self.convergence_plot = PlotlyComponent(id="convergence_plot")
         self.user_warning = UserWarning(
             title="Error in calculation!", message="Pairing does not seem to work"
         )
@@ -160,6 +161,7 @@ class FeStokesRePair(App):
             self.computing,
             Col(Heading("Velocity", level=3), self.velocity_sol),
             Col(Heading("Pressure", level=3), self.pressure_sol),
+            Col(Heading("Convergence", level=3), self.convergence_plot),
         )
         self.component = Centered(
             Col(
@@ -468,6 +470,16 @@ class FeStokesRePair(App):
         else:
             self.optconv_dsp.text = " -?- "
 
+        import plotly.graph_objects as go
+        self.fig = fig = go.Figure(layout = {"title": "Convergence", "font" : {"size": 18}})
+        fig.update_xaxes(title="Refinement level")
+        fig.update_yaxes(title="Error")
+        fig.add_trace(
+            go.Scatter(x=list(range(nref)), y=error_v_l2, mode="lines+markers", name="Velocity L2"))
+        fig.update_layout(
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            margin=dict(r=10),
+        )
+        self.convergence_plot.draw(self.fig)
         self.velocity_sol.draw(vel, mesh)
         self.pressure_sol.draw(gfp, mesh)
-
