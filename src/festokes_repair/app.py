@@ -352,7 +352,15 @@ class FeStokesRePair(App):
                 V = ngs.VectorH1(mesh, order=order, dgjumps=dgjumps,
                                  dirichlet=".*")
         bubble_space = False
-        order_velocity=int(self.velocity.model_value[-1])
+
+        # model value is a string, i need to extract the order, that is the integer inside the string "BDM2" or "P2*" are admissible
+        for c in self.velocity.model_value:
+            if c.isdigit():
+                order_velocity = int(c)
+                break
+
+
+        
         if "P3 Bubble" in extras and order_velocity < 3:
             bubble_space = True
             print("Add P3 Bubble")
@@ -509,7 +517,7 @@ class FeStokesRePair(App):
             self.optconv_dsp.text = " -?- "
         
         print(error_p_l2[-1], error_v_l2[-1])
-        if error_p_l2[-1]< 1 and error_v_l2[-1] < 1:
+        if error_p_l2[0]< 0.1 and error_v_l2[0] < 0.1:
             self.is_stable = True
 
         import plotly.graph_objects as go
