@@ -403,7 +403,7 @@ class FeStokesRePair(App):
             return u - u.Other()
         a = ngs.BilinearForm(stokes)
         f = ngs.LinearForm((self.m_nu_lap_u_exact + self.nabla_p_exact)*v*ngs.dx)
-        f2 = ngs.LinearForm((self.m_nu_lap_u_exact + 1e1*self.nabla_p_exact)*v*ngs.dx)
+        f2 = ngs.LinearForm((self.m_nu_lap_u_exact + 2e1*self.nabla_p_exact)*v*ngs.dx)
         n = ngs.specialcf.normal(mesh.dim)
         h = ngs.specialcf.mesh_size
         if "Interior Penalty" in extras:
@@ -539,7 +539,7 @@ class FeStokesRePair(App):
 
         self.prrob_dsp.text = "0"
         if convergence:
-            if abs(error_v_h1semi2[-1]-error_v_h1semi[-1])/error_v_h1semi2[-1] < 2e-1:
+            if abs(error_v_h1semi2[-1]-error_v_h1semi[-1])/error_v_h1semi2[-1] < 5e-2:
                 self.prrob_dsp.text = "2"
 
         import plotly.graph_objects as go
@@ -548,19 +548,12 @@ class FeStokesRePair(App):
                          dtick=1)
         fig.update_yaxes(title="Error", type="log", exponentformat="e")
         fig.add_trace(
-<<<<<<< HEAD
             go.Scatter(x=list(range(nref)), y=error_v_l2, mode="lines+markers", name="Velocity L2"))
         fig.add_trace(
-            go.Scatter(x=list(range(nref)), y=error_v_l2_2, mode="lines+markers", name="Velocity L2 (stronger grad. force)"))
-        fig.add_trace(
             go.Scatter(x=list(range(nref)), y=error_p_l2, mode="lines+markers", name="Pressure L2"))
-        fig.update_layout( 
-=======
-            go.Scatter(x=list(range(nref)), y=error_v_l2, mode="lines+markers", name="Velocity"))
         fig.add_trace(
-            go.Scatter(x=list(range(nref)), y=error_p_l2, mode="lines+markers", name="Pressure"))
+            go.Scatter(x=list(range(nref)), y=error_v_l2_2, mode="lines+markers", name="Velocity L2 (stronger grad. force)"))
         fig.update_layout(
->>>>>>> origin/main
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             margin=dict(r=10),
         )
