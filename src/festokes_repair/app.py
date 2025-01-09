@@ -396,6 +396,7 @@ class FeStokesRePair(App):
             return u - u.Other()
         a = ngs.BilinearForm(stokes)
         f = ngs.LinearForm((self.m_nu_lap_u_exact + self.nabla_p_exact)*v*ngs.dx)
+        f2 = ngs.LinearForm((self.m_nu_lap_u_exact + 1e3*self.nabla_p_exact)*v*ngs.dx)
         n = ngs.specialcf.normal(mesh.dim)
         h = ngs.specialcf.mesh_size
         if "Interior Penalty" in extras:
@@ -429,28 +430,42 @@ class FeStokesRePair(App):
         a.Assemble()
         f.Assemble()
         gf = ngs.GridFunction(fes)
+        gf2 = ngs.GridFunction(fes)
         if bubble_space:
             gfu, gfb, gfp = gf.components
             vel = gfu + gfb
             gradvel = ngs.Grad(gfu) + ngs.Grad(gfb)
             divuh = ngs.div(gfu) + ngs.div(gfb)
+            gfu2, gfb2, gfp2 = gf.components
+            vel2 = gfu2 + gfb2
+            gradvel2 = ngs.Grad(gfu2) + ngs.Grad(gfb2)
+            divuh2 = ngs.div(gfu2) + ngs.div(gfb2)
         else:
             gfu, gfp = gf.components
             vel = gfu
             gradvel = ngs.Grad(gfu)
             divuh = ngs.div(gfu)
+            gfu2, gfp2 = gf2.components
+            vel2 = gfu2
+            gradvel2 = ngs.Grad(gfu2)
+            divuh2 = ngs.div(gfu2)
         #uin = ngs.CF((1.5 * 4 * ngs.y * (0.41 - ngs.y) / (0.41 * 0.41), 0))
         gfu.Set(self.uexactbnd, definedon=mesh.Boundaries(".*"))
-        res = (-a.mat * gf.vec).Evaluate()
-        res += f.vec
+        gf2.vec.data = gf.vec
         inv = a.mat.Inverse(inverse="sparsecholesky", freedofs=fes.FreeDofs())
         #inv = ngs.directsolvers.SuperLU(a.mat, fes.FreeDofs())
+        res = (-a.mat * gf.vec).Evaluate()
+        res += f.vec
         gf.vec.data += inv * res
+
+        res = (-a.mat * gf.vec).Evaluate()
+        res += f2.vec
+        gf2.vec.data += inv * res
 
         offset_p = ngs.Integrate(gfp-self.pexact, mesh)/ngs.Integrate(1, mesh)
         p = gfp - offset_p
 
-        return (vel, gradvel, divuh, gfu.space.globalorder), (p, gfp.space.globalorder)
+        return (vel, gradvel, divuh, gfu.space.globalorder), (vel2, gradvel2, divuh2, gfu2.space.globalorder), (p, gfp.space.globalorder)
 
     def _solve_stokes_n(self, nref=4):
         error_v_divl2 = []
@@ -460,11 +475,13 @@ class FeStokesRePair(App):
         error_p_l2 = []
         for ref in range(nref):
             mesh = self._create_mesh(ref)
-            (vel, gradvel, divuh, velorder), (gfp, porder) = self._solve_stokes(mesh)
+            (vel, gradvel, divuh, velorder), (vel2, gradvel2, divuh2, velorder2), (gfp, porder) = self._solve_stokes(mesh)
             error_v_l2.append(ngs.sqrt(ngs.Integrate((vel-self.uexact)**2, mesh)))
             error_v_h1semi.append(ngs.sqrt(ngs.Integrate(ngs.InnerProduct(gradvel-self.graduexact,gradvel-self.graduexact), mesh)))
+            error_v_h1semi2.append(ngs.sqrt(ngs.Integrate(ngs.InnerProduct(gradvel2-self.graduexact,gradvel2-self.graduexact), mesh)))
             error_v_divl2.append(ngs.sqrt(ngs.Integrate(divuh**2, mesh)))
             error_p_l2.append(ngs.sqrt(ngs.Integrate((gfp-self.pexact)**2, mesh)))
+        convergence = True
         if nref > 1:
             from math import log
             eoc_v_h1 = log(error_v_h1semi[-1]/error_v_h1semi[-2])/log(0.5)
@@ -497,12 +514,18 @@ class FeStokesRePair(App):
                 self.optconv_dsp.text = "2"
             else:
                 self.optconv_dsp.text = "0"
+
         else:
             self.optconv_dsp.text = " -?- "
         
         print(error_p_l2[-1], error_v_l2[-1])
         if error_p_l2[-1]< 1 and error_v_l2[-1] < 1:
             self.is_stable = True
+
+        self.prrob_dsp.text = "0"
+        if convergence:
+            if abs(error_v_h1semi2[-1]-error_v_h1semi[-1])/error_v_h1semi2[-1] < 1e-6:
+                self.prrob_dsp.text = "2"
 
         import plotly.graph_objects as go
         self.fig = fig = go.Figure(layout = {"title": "Convergence", "font" : {"size": 18}})
@@ -515,5 +538,7 @@ class FeStokesRePair(App):
             margin=dict(r=10),
         )
         self.convergence_plot.draw(self.fig)
+
+
         self.velocity_sol.draw(vel, mesh)
         self.pressure_sol.draw(gfp, mesh)
