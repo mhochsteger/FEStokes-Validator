@@ -507,7 +507,7 @@ class FeStokesRePair(App):
         import plotly.graph_objects as go
         self.fig = fig = go.Figure(layout = {"title": "Convergence", "font" : {"size": 18}})
         fig.update_xaxes(title="Refinement level")
-        fig.update_yaxes(title="Error")
+        fig.update_yaxes(title="Error", type="log")
         fig.add_trace(
             go.Scatter(x=list(range(nref)), y=error_v_l2, mode="lines+markers", name="Velocity L2"))
         fig.update_layout(
