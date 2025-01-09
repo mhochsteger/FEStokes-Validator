@@ -447,7 +447,8 @@ class FeStokesRePair(App):
             gradvel = ngs.Grad(gfu)
             divuh = ngs.div(gfu)
         #uin = ngs.CF((1.5 * 4 * ngs.y * (0.41 - ngs.y) / (0.41 * 0.41), 0))
-        gfu.Set(self.uexactbnd, definedon=mesh.Boundaries(".*"))
+        if not self.velocity.model_value.endswith("*"):
+            gfu.Set(self.uexactbnd, definedon=mesh.Boundaries(".*"))
         res = (-a.mat * gf.vec).Evaluate()
         res += f.vec
         inv = a.mat.Inverse(inverse="sparsecholesky", freedofs=fes.FreeDofs())
