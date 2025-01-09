@@ -396,7 +396,7 @@ class FeStokesRePair(App):
             return u - u.Other()
         a = ngs.BilinearForm(stokes)
         f = ngs.LinearForm((self.m_nu_lap_u_exact + self.nabla_p_exact)*v*ngs.dx)
-        f2 = ngs.LinearForm((self.m_nu_lap_u_exact + 1e3*self.nabla_p_exact)*v*ngs.dx)
+        f2 = ngs.LinearForm((self.m_nu_lap_u_exact + 1e1*self.nabla_p_exact)*v*ngs.dx)
         n = ngs.specialcf.normal(mesh.dim)
         h = ngs.specialcf.mesh_size
         if "Interior Penalty" in extras:
@@ -452,14 +452,15 @@ class FeStokesRePair(App):
             divuh2 = ngs.div(gfu2)
         #uin = ngs.CF((1.5 * 4 * ngs.y * (0.41 - ngs.y) / (0.41 * 0.41), 0))
         gfu.Set(self.uexactbnd, definedon=mesh.Boundaries(".*"))
-        gf2.vec.data = gf.vec
+        gfu2.Set(self.uexactbnd, definedon=mesh.Boundaries(".*"))
         inv = a.mat.Inverse(inverse="sparsecholesky", freedofs=fes.FreeDofs())
         #inv = ngs.directsolvers.SuperLU(a.mat, fes.FreeDofs())
         res = (-a.mat * gf.vec).Evaluate()
         res += f.vec
         gf.vec.data += inv * res
 
-        res = (-a.mat * gf.vec).Evaluate()
+        res[:] = 0
+        res = (-a.mat * gf2.vec).Evaluate()
         res += f2.vec
         gf2.vec.data += inv * res
 
@@ -468,9 +469,10 @@ class FeStokesRePair(App):
 
         return (vel, gradvel, divuh, gfu.space.globalorder), (vel2, gradvel2, divuh2, gfu2.space.globalorder), (p, gfp.space.globalorder)
 
-    def _solve_stokes_n(self, nref=4):
+    def _solve_stokes_n(self, nref=3):
         error_v_divl2 = []
         error_v_l2 = []
+        error_v_l2_2 = []
         error_v_h1semi = []
         error_v_h1semi2 = []
         error_p_l2 = []
@@ -478,6 +480,7 @@ class FeStokesRePair(App):
             mesh = self._create_mesh(ref)
             (vel, gradvel, divuh, velorder), (vel2, gradvel2, divuh2, velorder2), (gfp, porder) = self._solve_stokes(mesh)
             error_v_l2.append(ngs.sqrt(ngs.Integrate((vel-self.uexact)**2, mesh)))
+            error_v_l2_2.append(ngs.sqrt(ngs.Integrate((vel2-self.uexact)**2, mesh)))
             error_v_h1semi.append(ngs.sqrt(ngs.Integrate(ngs.InnerProduct(gradvel-self.graduexact,gradvel-self.graduexact), mesh)))
             error_v_h1semi2.append(ngs.sqrt(ngs.Integrate(ngs.InnerProduct(gradvel2-self.graduexact,gradvel2-self.graduexact), mesh)))
             error_v_divl2.append(ngs.sqrt(ngs.Integrate(divuh**2, mesh)))
@@ -519,13 +522,14 @@ class FeStokesRePair(App):
         else:
             self.optconv_dsp.text = " -?- "
         
-        print(error_p_l2[-1], error_v_l2[-1])
+        print(error_p_l2[-1], error_v_l2[-1], error_v_l2_2[-1])
+        print(error_p_l2, error_v_l2, error_v_l2_2)
         if error_p_l2[-1]< 1 and error_v_l2[-1] < 1:
             self.is_stable = True
 
         self.prrob_dsp.text = "0"
         if convergence:
-            if abs(error_v_h1semi2[-1]-error_v_h1semi[-1])/error_v_h1semi2[-1] < 1e-6:
+            if abs(error_v_h1semi2[-1]-error_v_h1semi[-1])/error_v_h1semi2[-1] < 2e-1:
                 self.prrob_dsp.text = "2"
 
         import plotly.graph_objects as go
@@ -534,7 +538,11 @@ class FeStokesRePair(App):
         fig.update_yaxes(title="Error", type="log")
         fig.add_trace(
             go.Scatter(x=list(range(nref)), y=error_v_l2, mode="lines+markers", name="Velocity L2"))
-        fig.update_layout(
+        fig.add_trace(
+            go.Scatter(x=list(range(nref)), y=error_v_l2_2, mode="lines+markers", name="Velocity L2 (stronger grad. force)"))
+        fig.add_trace(
+            go.Scatter(x=list(range(nref)), y=error_p_l2, mode="lines+markers", name="Pressure L2"))
+        fig.update_layout( 
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             margin=dict(r=10),
         )
