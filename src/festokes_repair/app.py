@@ -373,7 +373,8 @@ class FeStokesRePair(App):
             bubbles.Clear()
             for el in Vhs.Elements(ngs.VOL):
                 dofs = Vhs.GetDofNrs(ngs.NodeId(ngs.CELL, el.nr))
-                bubbles.Set(dofs[0])
+                for d in dofs:
+                    bubbles.Set(d)
             Vhb = ngs.Compress(Vhs, active_dofs=bubbles)
             V *= Vhb
         print("Create Pressure space")
