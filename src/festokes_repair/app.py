@@ -134,6 +134,10 @@ class FeStokesRePair(App):
         self.prrob_lbl = Label("Pressure robustness:", classes="text-h6 q-mt-md")
         self.prrob_dsp = Label(" -?- ", classes="text-h6 q-mt-md")
 
+        self.totpoints_lbl = Label("Total:", classes="text-h6 q-mt-md")
+        self.totpoint_dsp = Label(" -?- ", classes="text-h6 q-mt-md")
+        self.is_stable = False
+
         self.extras = Row()
         self.velocity_sol = SolutionWebgui(
             caption="Velocity", show_clipping=False, show_view=False
@@ -168,7 +172,9 @@ class FeStokesRePair(App):
                 Row(self.clear_btn, self.calc_btn, 
                     QSeparator(spaced=True, vertical=True), self.bpoints_lbl, self.bpoints_dsp,
                     QSeparator(spaced=True, vertical=True), self.optconv_lbl, self.optconv_dsp,
-                    QSeparator(spaced=True, vertical=True), self.prrob_lbl, self.prrob_dsp),
+                    QSeparator(spaced=True, vertical=True), self.prrob_lbl, self.prrob_dsp,
+                    
+                    QSeparator(spaced=True, vertical=True), self.totpoints_lbl, self.totpoint_dsp),
                 self.result_section,
                 classes="q-gutter-lg q-ma-lg",
             )
@@ -184,7 +190,8 @@ class FeStokesRePair(App):
         self.velocity.update()
         self.velocity_sol._webgui.clear()
         self.pressure_sol._webgui.clear()
-        self.bpoints_dsp.text = " --- "
+        self.bpoints_dsp.text = " -?- "
+        self.is_stable = False
 
     def _add_extra(self):
         i = len(self.extras.children)
@@ -223,6 +230,26 @@ class FeStokesRePair(App):
             bpoints += e.points
 
         self.bpoints_dsp.text = str(bpoints)
+            
+
+        totpoints = 0
+        totpoints += bpoints
+        # if self.optconv_dsp can be converted to int, add it
+        try:
+            totpoints += int(self.optconv_dsp.text)
+        except:
+            pass
+
+        try:
+            totpoints += int(self.prrob_dsp.text)
+        except:
+            pass
+        
+        if self.is_stable:
+            self.totpoint_dsp.text = str(totpoints)
+        else: 
+            self.totpoint_dsp.text = "Unstable 0 !"
+        
 
     def _create_mesh(self, ref_lvl=0):
         import ngsolve.meshes as ngs_meshes
@@ -306,13 +333,16 @@ class FeStokesRePair(App):
         else:
             order = int(self.velocity.model_value[1])
             print("Create P", order)
-            if self.velocity.model_value.endswith("*"):
+            if self.velocity.model_value.endswith("*")  or self.velocity.model_value.endswith("0") :
+                print("Create P", order, "DG")
                 V = ngs.VectorL2(mesh, order=order, dgjumps=dgjumps)
             else:
+                print("Create P", order, "CG")
                 V = ngs.VectorH1(mesh, order=order, dgjumps=dgjumps,
                                  dirichlet=".*")
         bubble_space = False
-        if "P3 Bubble" in extras:
+        order_velocity=int(self.velocity.model_value[-1])
+        if "P3 Bubble" in extras and order_velocity < 3:
             bubble_space = True
             print("Add P3 Bubble")
             Vhs = ngs.VectorH1(mesh, order=3)
@@ -326,7 +356,7 @@ class FeStokesRePair(App):
             Vhb = ngs.Compress(Vhs, active_dofs=bubbles)
             V *= Vhb
         print("Create Pressure space")
-        if self.pressure.model_value.endswith("*"):
+        if self.pressure.model_value.endswith("*") or self.pressure.model_value.endswith("0"):
             print(f"Create L2({int(self.pressure.model_value[1])})")
             Q = ngs.L2(mesh, order=int(self.pressure.model_value[1]))
         else:
@@ -467,6 +497,10 @@ class FeStokesRePair(App):
                 self.optconv_dsp.text = "0"
         else:
             self.optconv_dsp.text = " -?- "
+        
+        print(error_p_l2[-1], error_v_l2[-1])
+        if error_p_l2[-1]< 1 and error_v_l2[-1] < 1:
+            self.is_stable = True
 
         self.velocity_sol.draw(vel, mesh)
         self.pressure_sol.draw(gfp, mesh)
