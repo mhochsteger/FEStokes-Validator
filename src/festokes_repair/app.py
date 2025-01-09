@@ -7,6 +7,8 @@ import netgen.occ as ngocc
 import ngsolve as ngs
 import os
 
+import plotly.graph_objects as go
+
 
 def image(filename):
     picture = os.path.join(os.path.dirname(__file__), "assets", filename)
@@ -192,7 +194,7 @@ class FeStokesRePair(App):
         self.velocity.update()
         self.velocity_sol._webgui.clear()
         self.pressure_sol._webgui.clear()
-        import plotly.graph_objects as go
+        
         self.fig = fig = go.Figure(layout = {"title": "Convergence", "font" : {"size": 18}})
         fig.update_xaxes(title="Refinement level")
         fig.update_yaxes(title="Error", type="log")
@@ -201,6 +203,7 @@ class FeStokesRePair(App):
             margin=dict(r=10),
         )
         self.convergence_plot.draw(self.fig)
+        
         self.bpoints_dsp.text = " -?- "
         self.is_stable = False
 
@@ -352,7 +355,16 @@ class FeStokesRePair(App):
                 V = ngs.VectorH1(mesh, order=order, dgjumps=dgjumps,
                                  dirichlet=".*")
         bubble_space = False
-        order_velocity=int(self.velocity.model_value[-1])
+
+        # model value is a string, i need to extract the order, that is the integer inside the string "BDM2" or "P2*" are admissible
+        order_velocity = 1
+        for c in self.velocity.model_value:
+            if c.isdigit():
+                order_velocity = int(c)
+                break
+
+
+        
         if "P3 Bubble" in extras and order_velocity < 3:
             bubble_space = True
             print("Add P3 Bubble")
@@ -532,9 +544,10 @@ class FeStokesRePair(App):
         else:
             self.optconv_dsp.text = " -?- "
         
+
         print(error_p_l2[-1], error_v_l2[-1], error_v_l2_2[-1])
         print(error_p_l2, error_v_l2, error_v_l2_2)
-        if error_p_l2[-1]< 1 and error_v_l2[-1] < 1:
+        if error_p_l2[-1]< 0.1 and error_v_l2[-1] < 0.1:
             self.is_stable = True
 
         self.prrob_dsp.text = "0"
@@ -543,16 +556,17 @@ class FeStokesRePair(App):
                 self.prrob_dsp.text = "2"
 
         import plotly.graph_objects as go
+
         self.fig = fig = go.Figure(layout = {"title": "Convergence", "font" : {"size": 18}})
         fig.update_xaxes(title="Refinement level", tickmode="linear",
                          dtick=1)
         fig.update_yaxes(title="Error", type="log", exponentformat="e")
+        error_v_h1 = [ngs.sqrt(error_v_h1semi[i]**2 + error_v_l2[i]**2) for i in range(nref)]
+        fig.add_trace( # write in latex style H^1
+            go.Scatter(x=list(range(nref)), y=error_v_h1, mode="lines+markers", name ='velocity H1'))
         fig.add_trace(
-            go.Scatter(x=list(range(nref)), y=error_v_l2, mode="lines+markers", name="Velocity L2"))
-        fig.add_trace(
-            go.Scatter(x=list(range(nref)), y=error_p_l2, mode="lines+markers", name="Pressure L2"))
-        fig.add_trace(
-            go.Scatter(x=list(range(nref)), y=error_v_l2_2, mode="lines+markers", name="Velocity L2 (stronger grad. force)"))
+            go.Scatter(x=list(range(nref)), y=error_p_l2, mode="lines+markers", name='Pressure L2'))
+
         fig.update_layout(
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             margin=dict(r=10),
