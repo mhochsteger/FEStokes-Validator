@@ -260,15 +260,15 @@ class FeStokesRePair(App):
             # split quads in 4 trigs?
         for e in self.extras.children:
             if e.model_value == "Alfeld Split":
-                #mesh.ngmesh.Save("tmp.vol")
-                #mesh = Mesh("tmp.vol")
+                mesh.ngmesh.Save("tmp.vol")
+                mesh = ngs.Mesh("tmp.vol")
                 mesh.ngmesh.Compress()
                 ngmesh = mesh.ngmesh
                 ngmesh.SplitAlfeld()
                 mesh = ngs.Mesh(ngmesh)
             elif e.model_value == "Powell-Sabin Split":
-                #mesh.ngmesh.Save("tmp.vol")
-                #mesh = Mesh("tmp.vol")
+                mesh.ngmesh.Save("tmp.vol")
+                mesh = ngs.Mesh("tmp.vol")
                 mesh.ngmesh.Compress()
                 ngmesh = mesh.ngmesh
                 ngmesh.SplitPowellSabin()
@@ -426,10 +426,6 @@ class FeStokesRePair(App):
         error_v_h1semi = []
         error_v_h1semi2 = []
         error_p_l2 = []
-        if "Alfeld Split" in [e.model_value for e in self.extras.children] or \
-           "Powell-Sabin Split" in [e.model_value for e in self.extras.children]:
-            nref = 1
-            print("Alfeld/Powell-Sabin Split and refinement do not work together yet")
         for ref in range(nref):
             mesh = self._create_mesh(ref)
             (vel, gradvel, divuh, velorder), (gfp, porder) = self._solve_stokes(mesh)
