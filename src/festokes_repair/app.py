@@ -165,7 +165,7 @@ class FeStokesRePair(App):
             self.computing,
             Col(Heading("Velocity", level=3), self.velocity_sol),
             Col(Heading("Pressure", level=3), self.pressure_sol),
-            Col(Heading("Convergence", level=3), self.convergence_plot),
+            Col(self.convergence_plot),
         )
         self.component = Centered(
             Col(
@@ -192,6 +192,15 @@ class FeStokesRePair(App):
         self.velocity.update()
         self.velocity_sol._webgui.clear()
         self.pressure_sol._webgui.clear()
+        import plotly.graph_objects as go
+        self.fig = fig = go.Figure(layout = {"title": "Convergence", "font" : {"size": 18}})
+        fig.update_xaxes(title="Refinement level")
+        fig.update_yaxes(title="Error", type="log")
+        fig.update_layout(
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            margin=dict(r=10),
+        )
+        self.convergence_plot.draw(self.fig)
         self.bpoints_dsp.text = " -?- "
         self.is_stable = False
 
@@ -350,11 +359,9 @@ class FeStokesRePair(App):
             Vhs = ngs.VectorH1(mesh, order=3)
             bubbles = ngs.BitArray(Vhs.ndof)
             bubbles.Clear()
-            for dof in range(
-                mesh.nv + 2 * mesh.nedge, mesh.nv + 2 * mesh.nedge + mesh.ne
-            ):
-                bubbles.Set(dof)
-                bubbles.Set(Vhs.ndof // 2 + dof)
+            for el in Vhs.Elements(ngs.VOL):
+                dofs = Vhs.GetDofNrs(ngs.NodeId(ngs.CELL, el.nr))
+                bubbles.Set(dofs[0])
             Vhb = ngs.Compress(Vhs, active_dofs=bubbles)
             V *= Vhb
         print("Create Pressure space")
@@ -368,13 +375,13 @@ class FeStokesRePair(App):
         if bubble_space:
             print("in bubble space")
             (us, ub, p), (vs, vb, q) = fes.TnT()
-            gradu = ngs.Grad(u) + ngs.Grad(ub)
-            gradv = ngs.Grad(v) + ngs.Grad(vb)
-            divu = ngs.div(u) + ngs.div(ub)
-            divv = ngs.div(v) + ngs.div(vb)
+            gradu = ngs.Grad(us) + ngs.Grad(ub)
+            gradv = ngs.Grad(vs) + ngs.Grad(vb)
+            divu = ngs.div(us) + ngs.div(ub)
+            divv = ngs.div(vs) + ngs.div(vb)
+            uOther, vOther = us.Other() + ub.Other(), vs.Other() + vb.Other()
+            graduOther, gradvOther = ngs.Grad(us.Other())+ngs.Grad(ub.Other()), ngs.Grad(vs.Other())+ngs.Grad(vb.Other())
             u, v = us + ub, vs + vb
-            uOther, vOther = u.Other() + ub.Other(), v.Other() + vb.Other()
-            graduOther, gradvOther = ngs.Grad(u.Other())+ngs.Grad(ub.Other()), ngs.Grad(v.Other())+ngs.Grad(vb.Other())
         else:
             (u, p), (v, q) = fes.TnT()
             gradu, gradv = ngs.Grad(u), ngs.Grad(v)
@@ -451,8 +458,11 @@ class FeStokesRePair(App):
             gradvel2 = ngs.Grad(gfu2)
             divuh2 = ngs.div(gfu2)
         #uin = ngs.CF((1.5 * 4 * ngs.y * (0.41 - ngs.y) / (0.41 * 0.41), 0))
-        gfu.Set(self.uexactbnd, definedon=mesh.Boundaries(".*"))
-        gfu2.Set(self.uexactbnd, definedon=mesh.Boundaries(".*"))
+        if not self.velocity.model_value.endswith("*"):
+            gfu.Set(self.uexactbnd, definedon=mesh.Boundaries(".*"))
+            gfu2.Set(self.uexactbnd, definedon=mesh.Boundaries(".*"))
+        res = (-a.mat * gf.vec).Evaluate()
+        res += f.vec
         inv = a.mat.Inverse(inverse="sparsecholesky", freedofs=fes.FreeDofs())
         #inv = ngs.directsolvers.SuperLU(a.mat, fes.FreeDofs())
         res = (-a.mat * gf.vec).Evaluate()
@@ -534,15 +544,23 @@ class FeStokesRePair(App):
 
         import plotly.graph_objects as go
         self.fig = fig = go.Figure(layout = {"title": "Convergence", "font" : {"size": 18}})
-        fig.update_xaxes(title="Refinement level")
-        fig.update_yaxes(title="Error", type="log")
+        fig.update_xaxes(title="Refinement level", tickmode="linear",
+                         dtick=1)
+        fig.update_yaxes(title="Error", type="log", exponentformat="e")
         fig.add_trace(
+<<<<<<< HEAD
             go.Scatter(x=list(range(nref)), y=error_v_l2, mode="lines+markers", name="Velocity L2"))
         fig.add_trace(
             go.Scatter(x=list(range(nref)), y=error_v_l2_2, mode="lines+markers", name="Velocity L2 (stronger grad. force)"))
         fig.add_trace(
             go.Scatter(x=list(range(nref)), y=error_p_l2, mode="lines+markers", name="Pressure L2"))
         fig.update_layout( 
+=======
+            go.Scatter(x=list(range(nref)), y=error_v_l2, mode="lines+markers", name="Velocity"))
+        fig.add_trace(
+            go.Scatter(x=list(range(nref)), y=error_p_l2, mode="lines+markers", name="Pressure"))
+        fig.update_layout(
+>>>>>>> origin/main
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             margin=dict(r=10),
         )
