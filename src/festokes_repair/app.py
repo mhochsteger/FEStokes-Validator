@@ -192,6 +192,15 @@ class FeStokesRePair(App):
         self.velocity.update()
         self.velocity_sol._webgui.clear()
         self.pressure_sol._webgui.clear()
+        import plotly.graph_objects as go
+        self.fig = fig = go.Figure(layout = {"title": "Convergence", "font" : {"size": 18}})
+        fig.update_xaxes(title="Refinement level")
+        fig.update_yaxes(title="Error", type="log")
+        fig.update_layout(
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            margin=dict(r=10),
+        )
+        self.convergence_plot.draw(self.fig)
         self.bpoints_dsp.text = " -?- "
         self.is_stable = False
 
