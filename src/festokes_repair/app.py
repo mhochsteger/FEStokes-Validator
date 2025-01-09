@@ -429,6 +429,7 @@ class FeStokesRePair(App):
 
         a.Assemble()
         f.Assemble()
+        f2.Assemble()
         gf = ngs.GridFunction(fes)
         gf2 = ngs.GridFunction(fes)
         if bubble_space:
