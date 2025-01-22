@@ -66,37 +66,39 @@ class CardSelector(QCard):
     def __init__(self, options, label):
         self._options = options
         self.selector = QSelect(
-            options=list(options.keys()), model_value="None", label=label
+            ui_options=list(options.keys()), ui_model_value="None",
+            ui_label=label
         )
         self.selector.on_update_model_value(self.update)
         self.div_image = QImg(
-            src=image(options[self.selector.model_value]["image"]), width="200px"
+            ui_src=image(options[self.selector.ui_model_value]["image"]),
+            ui_width="200px"
         )
         super().__init__(
-            self.selector, self.div_image, style="padding: 10px; margin: 10px;"
+            self.selector, self.div_image, ui_style="padding: 10px; margin: 10px;"
         )
 
     def update(self):
-        print("selected item =", self.selector.model_value)
-        self.div_image.src = image(self._options[self.selector.model_value]["image"])
+        print("selected item =", self.selector.ui_model_value)
+        self.div_image.ui_src = image(self._options[self.selector.ui_model_value]["image"])
 
     def on_update_model_value(self, callback):
         self.selector.on_update_model_value(callback)
 
     @property
     def model_value(self):
-        return self.selector.model_value
+        return self.selector.ui_model_value
 
     @property
     def points(self):
         try: 
-            return self._options[self.selector.model_value]["points"]
+            return self._options[self.selector.ui_model_value]["points"]
         except:
             return 0
 
     @model_value.setter
     def model_value(self, value):
-        self.selector.model_value = value
+        self.selector.ui_model_value = value
 
 
 class FeStokesRePair(App):
@@ -124,20 +126,20 @@ class FeStokesRePair(App):
 
         # self.velocity.on_update_model_value(self.calculate)
         self.add_extra = Row(
-            QBtn(round=True, icon="add", fab=True).on_click(self._add_extra),
-            classes="items-center",
+            QBtn(ui_round=True, ui_icon="add", ui_fab=True).on_click(self._add_extra),
+            ui_class="items-center",
         )
-        self.clear_btn = QBtn(label="Clear").on_click(self.clear)
-        self.calc_btn = QBtn(label="Validate").on_click(self.calculate)
-        self.bpoints_lbl = Label("Basic points:", classes="text-h6 q-mt-md")
-        self.bpoints_dsp = Label(" -?- ", classes="text-h6 q-mt-md")
-        self.optconv_lbl = Label("Optimal convergence:", classes="text-h6 q-mt-md")
-        self.optconv_dsp = Label(" -?- ", classes="text-h6 q-mt-md")
-        self.prrob_lbl = Label("Pressure robustness:", classes="text-h6 q-mt-md")
-        self.prrob_dsp = Label(" -?- ", classes="text-h6 q-mt-md")
+        self.clear_btn = QBtn(ui_label="Clear").on_click(self.clear)
+        self.calc_btn = QBtn(ui_label="Validate").on_click(self.calculate)
+        self.bpoints_lbl = Label("Basic points:", ui_class="text-h6 q-mt-md")
+        self.bpoints_dsp = Label(" -?- ", ui_class="text-h6 q-mt-md")
+        self.optconv_lbl = Label("Optimal convergence:", ui_class="text-h6 q-mt-md")
+        self.optconv_dsp = Label(" -?- ", ui_class="text-h6 q-mt-md")
+        self.prrob_lbl = Label("Pressure robustness:", ui_class="text-h6 q-mt-md")
+        self.prrob_dsp = Label(" -?- ", ui_class="text-h6 q-mt-md")
 
-        self.totpoints_lbl = Label("Total:", classes="text-h6 q-mt-md")
-        self.totpoint_dsp = Label(" -?- ", classes="text-h6 q-mt-md")
+        self.totpoints_lbl = Label("Total:", ui_class="text-h6 q-mt-md")
+        self.totpoint_dsp = Label(" -?- ", ui_class="text-h6 q-mt-md")
         self.is_stable = False
 
         self.extras = Row()
@@ -149,19 +151,20 @@ class FeStokesRePair(App):
         )
         self.convergence_plot = PlotlyComponent(id="convergence_plot")
         self.user_warning = UserWarning(
-            title="Error in calculation!", message="Pairing does not seem to work"
+            ui_title="Error in calculation!",
+            ui_message="Pairing does not seem to work"
         )
 
         self.cards = Row(
             self.mesh, self.pressure, self.velocity, self.extras, self.add_extra
         )
         self.computing = QInnerLoading(
-            QSpinnerGears(size="100px", color="primary"),
+            QSpinnerGears(ui_size="100px", ui_color="primary"),
             Centered("Calculating..."),
-            showing=True,
-            style="z-index:100;",
+            ui_showing=True,
+            ui_style="z-index:100;",
         )
-        self.computing.hidden = True
+        self.computing.ui_hidden = True
 
         self.result_section = Row(
             self.computing,
@@ -174,18 +177,18 @@ class FeStokesRePair(App):
                 self.user_warning,
                 self.cards,
                 Row(self.clear_btn, self.calc_btn, 
-                    QSeparator(spaced=True, vertical=True), self.bpoints_lbl, self.bpoints_dsp,
-                    QSeparator(spaced=True, vertical=True), self.optconv_lbl, self.optconv_dsp,
-                    QSeparator(spaced=True, vertical=True), self.prrob_lbl, self.prrob_dsp,
+                    QSeparator(ui_spaced=True, ui_vertical=True), self.bpoints_lbl, self.bpoints_dsp,
+                    QSeparator(ui_spaced=True, ui_vertical=True), self.optconv_lbl, self.optconv_dsp,
+                    QSeparator(ui_spaced=True, ui_vertical=True), self.prrob_lbl, self.prrob_dsp,
                     
-                    QSeparator(spaced=True, vertical=True), self.totpoints_lbl, self.totpoint_dsp),
+                    QSeparator(ui_spaced=True, ui_vertical=True), self.totpoints_lbl, self.totpoint_dsp),
                 self.result_section,
-                classes="q-gutter-lg q-ma-lg",
+                ui_class="q-gutter-lg q-ma-lg",
             )
         )
 
     def clear(self):
-        self.extras.children = []
+        self.extras.ui_children = []
         self.mesh.model_value = "None"
         self.mesh.update()
         self.pressure.model_value = "None"
@@ -208,39 +211,39 @@ class FeStokesRePair(App):
         self.is_stable = False
 
     def _add_extra(self):
-        i = len(self.extras.children)
+        i = len(self.extras.ui_children)
         extra = CardSelector(
             label="Extra " + str(i + 1),
             options=extra_cards,
         )
         # extra.on_update_model_value(self.calculate)
-        self.extras.children = self.extras.children + [extra]
+        self.extras.ui_children = self.extras.ui_children + [extra]
 
     def calculate(self):
         if self.mesh.model_value is None:
             return
-        self.computing.hidden = False
+        self.computing.ui_hidden = False
         mesh = self._create_mesh()
         if self.velocity.model_value is None or self.pressure.model_value is None:
             self.velocity_sol.draw(mesh)
             self.pressure_sol.draw(mesh)
-            self.computing.hidden = True
+            self.computing.ui_hidden = True
             return
         try:
             self._solve_stokes_n()
         except Exception as e:
             print("caught exception", e)
-            self.user_warning.message = str(e)
-            self.user_warning.show()
+            self.user_warning.ui_message = str(e)
+            self.user_warning.ui_show()
             self.velocity_sol._webgui.clear()
             self.pressure_sol._webgui.clear()
-        self.computing.hidden = True
+        self.computing.ui_hidden = True
 
         bpoints = 0
         bpoints += self.mesh.points
         bpoints += self.pressure.points
         bpoints += self.velocity.points
-        for e in self.extras.children:
+        for e in self.extras.ui_children:
             bpoints += e.points
 
         self.bpoints_dsp.text = str(bpoints)
@@ -299,7 +302,7 @@ class FeStokesRePair(App):
         else:  # self.mesh.model_value == "Singular Vertex Mesh":
             mesh = ngs_meshes.MakeStructured2DMesh(quads=True, nx=2**(ref_lvl+1), ny=2**(ref_lvl+1))
             # split quads in 4 trigs?
-        for e in self.extras.children:
+        for e in self.extras.ui_children:
             if e.model_value == "Alfeld Split":
                 mesh.ngmesh.Save("tmp.vol")
                 mesh = ngs.Mesh("tmp.vol")
@@ -331,7 +334,7 @@ class FeStokesRePair(App):
         assert self.velocity.model_value is not None
         assert self.pressure.model_value is not None
         print("Create Velocity space")
-        extras = [e.model_value for e in self.extras.children]
+        extras = [e.model_value for e in self.extras.ui_children]
         if ("Interior Penalty" in extras) or ("Pressure-Jump" in extras):
             dgjumps = True
         else:
