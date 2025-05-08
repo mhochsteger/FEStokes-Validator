@@ -1,0 +1,17 @@
+{
+    "1": {
+        "id": 1,
+        "name": "FE-Stokes RE-Pair",
+        "python_class": "festokes_repair.app.FeStokesRePair",
+        "frontend_pip_dependencies": [
+            "netgen",
+            "ngsolve",
+            "scipy",
+            "plotly"
+        ],
+        "frontend_dependencies": [],
+        "description": "Evaluator for https://fe-nerd-games.github.io/FEStokesRePair/",
+        "image": null,
+        "logo": {}
+    }
+}
