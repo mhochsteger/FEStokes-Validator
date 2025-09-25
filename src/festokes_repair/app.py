@@ -142,10 +142,10 @@ class FeStokesRePair(App):
 
         self.extras = Row()
         self.velocity_sol = SolutionWebgui(
-            caption="Velocity", show_clipping=False, show_view=False
+            id="velocity", caption="Velocity", show_clipping=False, show_view=False
         )
         self.pressure_sol = SolutionWebgui(
-            caption="Pressure", show_clipping=False, show_view=False
+            id="pressure", caption="Pressure", show_clipping=False, show_view=False
         )
         self.convergence_plot = PlotlyComponent(id="convergence_plot")
         self.user_warning = UserWarning(
