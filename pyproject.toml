@@ -12,3 +12,4 @@ where = ["src"]
 
 [tool.setuptools.dynamic]
 version = {attr = "festokes_repair.__version__"}
+
