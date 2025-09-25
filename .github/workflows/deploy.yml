@@ -32,6 +32,9 @@ jobs:
       - name: Generate HTML
         run: python3 -m ngapp.cli.build_website -a festokes_repair.appconfig
 
+      - name: Fix security policy
+        run: sed -i 's/credentialless/require-corp/g' html/enable-threads.js
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
