@@ -101,7 +101,6 @@ class CardSelector(QCard):
 
 class FeStokesRePair(App):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.mesh = CardSelector(
             label="Mesh",
             options=mesh_cards,
@@ -170,20 +169,23 @@ class FeStokesRePair(App):
             Col(Heading("Pressure", level=3), self.pressure_sol),
             Col(self.convergence_plot),
         )
-        self.component = Centered(
+        # pass layout to App constructor, setting self.component loses the
+        # namespaces of velocity_sol/pressure_sol in ngapp 1.1.0
+        layout = Centered(
             Col(
                 self.user_warning,
                 self.cards,
-                Row(self.clear_btn, self.calc_btn, 
+                Row(self.clear_btn, self.calc_btn,
                     QSeparator(ui_spaced=True, ui_vertical=True), self.bpoints_lbl, self.bpoints_dsp,
                     QSeparator(ui_spaced=True, ui_vertical=True), self.optconv_lbl, self.optconv_dsp,
                     QSeparator(ui_spaced=True, ui_vertical=True), self.prrob_lbl, self.prrob_dsp,
-                    
+
                     QSeparator(ui_spaced=True, ui_vertical=True), self.totpoints_lbl, self.totpoint_dsp),
                 self.result_section,
                 ui_class="q-gutter-lg q-ma-lg",
             )
         )
+        super().__init__(layout, *args, **kwargs)
 
     def clear(self):
         self.extras.ui_children = []
@@ -193,8 +195,8 @@ class FeStokesRePair(App):
         self.pressure.update()
         self.velocity.model_value = "None"
         self.velocity.update()
-        self.velocity_sol._webgui.clear()
-        self.pressure_sol._webgui.clear()
+        self.velocity_sol.clear()
+        self.pressure_sol.clear()
         
         self.fig = fig = go.Figure(layout = {"title": "Convergence", "font" : {"size": 18}})
         fig.update_xaxes(title="Refinement level")
@@ -233,8 +235,8 @@ class FeStokesRePair(App):
             print("caught exception", e)
             self.user_warning.ui_message = str(e)
             self.user_warning.ui_show()
-            self.velocity_sol._webgui.clear()
-            self.pressure_sol._webgui.clear()
+            self.velocity_sol.clear()
+            self.pressure_sol.clear()
         self.computing.ui_hidden = True
 
         bpoints = 0
